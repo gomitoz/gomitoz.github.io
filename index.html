@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Logístico: Envíos vs Entregas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 30px; }
+        .card-header { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .kpi-container { display: flex; justify-content: space-around; margin-bottom: 20px; flex-wrap: wrap; }
+        .kpi-box { background: #fff; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; margin: 10px; min-width: 200px; }
+        .kpi-value { font-size: 2em; font-weight: bold; color: #2980b9; }
+        .kpi-value.green { color: #27ae60; }
+        .kpi-label { color: #7f8c8d; }
+        
+        /* Estilo para mensajes de error/carga */
+        #statusMessage { 
+            text-align: center; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            font-weight: bold;
+        }
+        .status-loading { background-color: #e3f2fd; color: #0d47a1; }
+        .status-error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dashboard Operativo</h1>
+
+    <div id="statusMessage" class="status-loading">
+        Conectando con Google Sheets...
+    </div>
+
+    <div id="dashboardContent" style="display:none;">
+        <div class="kpi-container">
+            <div class="kpi-box">
+                <div class="kpi-value" id="totalSent">0</div>
+                <div class="kpi-label">Total Enviados</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-value green" id="totalDelivered">0</div>
+                <div class="kpi-label">Total Entregados</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-value" id="efficiency">0%</div>
+                <div class="kpi-label">Efectividad General</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Visualización Semanal</div>
+            <div class="chart-container">
+                <canvas id="shippingChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Detalle de Datos</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Periodo</th>
+                        <th>Enviados</th>
+                        <th>Entregados</th>
+                        <th>% Efectividad</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURACIÓN: PEGA AQUÍ TU ENLACE
+    // ==========================================
+    const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv'; 
+
+    async function init() {
+        const statusDiv = document.getElementById('statusMessage');
+
+        // 1. Verificación básica del enlace
+        if(GOOGLE_SHEET_CSV_URL === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv' || GOOGLE_SHEET_CSV_URL.length < 10) {
+            showError("¡Falta el enlace! Edita el código HTML y pon tu URL de Google Sheets.");
+            return;
+        }
+
+        try {
+            // 2. Intentamos descargar con FETCH (más robusto)
+            const response = await fetch(GOOGLE_SHEET_CSV_URL);
+
+            if (!response.ok) {
+                throw new Error(`Error de conexión (${response.status}): ${response.statusText}`);
+            }
+
+            // 3. Verificar si Google nos devolvió una web en lugar de datos
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("text/html")) {
+                throw new Error("El enlace es incorrecto. Parece ser una página web, no un CSV. Asegúrate de usar el enlace de 'Publicar en la web' que termina en 'output=csv'.");
+            }
+
+            const csvText = await response.text();
+
+            // 4. Procesar CSV
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        console.warn("Advertencias del CSV:", results.errors);
+                    }
+                    
+                    const data = results.data;
+                    // Validar que tenga las columnas correctas
+                    if(data.length > 0 && (!data[0].hasOwnProperty('Periodo') || !data[0].hasOwnProperty('Enviados'))) {
+                        showError("El archivo no tiene las columnas correctas. Necesita: 'Periodo', 'Enviados', 'Entregados'.");
+                        return;
+                    }
+
+                    renderDashboard(data);
+                },
+                error: function(err) {
+                    throw new Error("Fallo al leer la estructura del CSV: " + err.message);
+                }
+            });
+
+        } catch (error) {
+            console.error(error);
+            showError(error.message);
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('statusMessage');
+        el.className = 'status-error';
+        el.innerHTML = `<strong>Algo salió mal:</strong><br>${msg}<br><br><small>Verifica que el enlace sea 'Público en la web' y formato CSV.</small>`;
+    }
+
+    function renderDashboard(rawData) {
+        document.getElementById('statusMessage').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+
+        let sumSent = 0, sumDelivered = 0;
+        const tableBody = document.getElementById('tableBody');
+        const labels = [], sentData = [], deliveredData = [];
+
+        rawData.forEach(row => {
+            if(!row.Periodo) return; // Saltar filas vacías
+            
+            const env = Number(row.Enviados) || 0;
+            const entr = Number(row.Entregados) || 0;
+            const percent = env > 0 ? ((entr / env) * 100).toFixed(1) + '%' : '0%';
+
+            labels.push(row.Periodo);
+            sentData.push(env);
+            deliveredData.push(entr);
+            sumSent += env;
+            sumDelivered += entr;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${row.Periodo}</td><td>${env}</td><td>${entr}</td><td><strong>${percent}</strong></td>`;
+            tableBody.appendChild(tr);
+        });
+
+        document.getElementById('totalSent').innerText = sumSent.toLocaleString();
+        document.getElementById('totalDelivered').innerText = sumDelivered.toLocaleString();
+        document.getElementById('efficiency').innerText = sumSent > 0 ? ((sumDelivered / sumSent) * 100).toFixed(1) + '%' : '0%';
+
+        new Chart(document.getElementById('shippingChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Enviados', data: sentData, backgroundColor: '#3498db' },
+                    { label: 'Entregados', data: deliveredData, backgroundColor: '#2ecc71' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    init();
+</script>
+
+</body>
+</html>
