@@ -95,7 +95,8 @@
         const statusDiv = document.getElementById('statusMessage');
 
         // 1. Verificación básica del enlace
-        if(GOOGLE_SHEET_CSV_URL === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv' || GOOGLE_SHEET_CSV_URL.length < 10) {
+        // AQUÍ EL CAMBIO: Comparamos contra el texto de relleno, NO contra tu enlace real.
+        if(GOOGLE_SHEET_CSV_URL === 'TU_ENLACE_CSV_AQUI' || GOOGLE_SHEET_CSV_URL.length < 10) {
             showError("¡Falta el enlace! Edita el código HTML y pon tu URL de Google Sheets.");
             return;
         }
