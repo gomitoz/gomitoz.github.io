@@ -155,4 +155,133 @@
     async function cargarDatosSupabase() {
         try {
             document.getElementById('statusMessage').innerText = "Consultando base de datos...";
-            document.getElementById('statusMessage').style.display = '
+            document.getElementById('statusMessage').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+
+            const mesInicio = document.getElementById('mesInicio').value; 
+            const mesFin = document.getElementById('mesFin').value;
+
+            let consulta = clienteSupabase
+                .from('paquetes_enviados')
+                .select('fecha_envio, estatus_entrega')
+                .limit(10000);
+
+            if (mesInicio) {
+                consulta = consulta.gte('fecha_envio', `${mesInicio}-01T00:00:00`);
+            }
+
+            if (mesFin) {
+                const [anio, mes] = mesFin.split('-');
+                const ultimoDia = new Date(anio, mes, 0).getDate(); 
+                consulta = consulta.lte('fecha_envio', `${mesFin}-${ultimoDia}T23:59:59`);
+            }
+
+            const { data, error } = await consulta;
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                showError("No se encontraron paquetes en este rango de fechas.");
+                return;
+            }
+
+            const agrupado = {};
+
+            data.forEach(paquete => {
+                if (!paquete.fecha_envio) return;
+
+                const fecha = new Date(paquete.fecha_envio);
+                const año = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const periodo = `${año}-${mes}`; 
+
+                if (!agrupado[periodo]) {
+                    agrupado[periodo] = { Periodo: periodo, Enviados: 0, Entregados: 0 };
+                }
+
+                agrupado[periodo].Enviados++;
+
+                const estatus = (paquete.estatus_entrega || '').toLowerCase();
+                if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
+                    agrupado[periodo].Entregados++;
+                }
+            });
+
+            const dataFinal = Object.values(agrupado).sort((a, b) => a.Periodo.localeCompare(b.Periodo));
+            
+            renderDashboard(dataFinal);
+
+        } catch (error) {
+            showError("Error conectando a base de datos: " + error.message);
+        }
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('mesInicio').value = '';
+        document.getElementById('mesFin').value = '';
+        cargarDatosSupabase();
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('statusMessage');
+        el.className = 'status-error';
+        el.style.display = 'block';
+        el.innerHTML = `<strong>Atención:</strong><br>${msg}`;
+        document.getElementById('dashboardContent').style.display = 'none';
+    }
+
+    // ==========================================
+    // RENDERIZADO VISUAL
+    // ==========================================
+    function renderDashboard(rawData) {
+        document.getElementById('statusMessage').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+
+        let sumSent = 0, sumDelivered = 0;
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = ''; 
+        const labels = [], sentData = [], deliveredData = [];
+
+        rawData.forEach(row => {
+            const env = row.Enviados;
+            const entr = row.Entregados;
+            const percent = env > 0 ? ((entr / env) * 100).toFixed(1) + '%' : '0%';
+
+            labels.push(row.Periodo);
+            sentData.push(env);
+            deliveredData.push(entr);
+            sumSent += env;
+            sumDelivered += entr;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${row.Periodo}</td><td>${env}</td><td>${entr}</td><td><strong>${percent}</strong></td>`;
+            tableBody.appendChild(tr);
+        });
+
+        document.getElementById('totalSent').innerText = sumSent.toLocaleString();
+        document.getElementById('totalDelivered').innerText = sumDelivered.toLocaleString();
+        document.getElementById('efficiency').innerText = sumSent > 0 ? ((sumDelivered / sumSent) * 100).toFixed(1) + '%' : '0%';
+
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(document.getElementById('shippingChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Enviados', data: sentData, backgroundColor: '#3498db' },
+                    { label: 'Entregados', data: deliveredData, backgroundColor: '#2ecc71' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    // ARRANQUE DEL SISTEMA
+    iniciarSistema();
+</script>
+
+</body>
+</html>
