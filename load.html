@@ -174,6 +174,12 @@
             complete: async function(results) {
                 const filas = results.data;
                 
+                // --- LAS 3 LÍNEAS CHISMOSAS (Agrégalas aquí) ---
+                console.log("1. Fila completa leída del Excel:", filas[0]);
+                console.log("2. Lo que lee en created_at:", filas[0].created_at);
+                console.log("3. Resultado del traductor:", formatoFechaDB(filas[0].created_at));
+                // ----------------------------------------------
+
                 const datosLimpios = filas.map(fila => {
                     let dataMapeada = {
                         tracking_number: fila.tracking_number ? String(fila.tracking_number) : 'Sin Tracking',
