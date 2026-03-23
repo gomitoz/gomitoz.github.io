@@ -6,6 +6,7 @@
     <title>Dashboard Logístico: Envíos vs Entregas</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -40,7 +41,11 @@
 
 <div class="container">
     <h1>Dashboard Operativo</h1>
-
+    <div style="text-align: right; margin-bottom: 20px;">
+        <button onclick="cerrarSesion()" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Cerrar Sesión
+        </button>
+    </div>
     <div id="statusMessage" class="status-loading">
         Conectando con Google Sheets...
     </div>
@@ -86,6 +91,37 @@
 </div>
 
 <script>
+
+// ==========================================
+    // CONFIGURACIÓN Y SEGURIDAD DE SUPABASE
+    // ==========================================
+    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; // La que encontraste en Data API
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Función que verifica si el usuario tiene permiso de estar aquí
+    async function protegerRuta() {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Si no hay sesión activa, lo pateamos a la pantalla de login
+        if (!session || error) {
+            window.location.href = "login.html";
+        } else {
+            // Opcional: Mostrar el correo del usuario que entró
+            console.log("Usuario autenticado:", session.user.email);
+        }
+    }
+    
+    // Ejecutar el candado inmediatamente al cargar la página
+    protegerRuta();
+
+    // Función para cerrar sesión
+    async function cerrarSesion() {
+        await supabase.auth.signOut();
+        window.location.href = "login.html";
+    }
+
+    
     // ==========================================
     // CONFIGURACIÓN: PEGA AQUÍ TU ENLACE
     // ==========================================
