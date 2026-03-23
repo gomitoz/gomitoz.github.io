@@ -102,8 +102,8 @@
         return null;
     }
 
-    // ==========================================
-    // PROCESAMIENTO DEL ARCHIVO
+   // ==========================================
+    // PROCESAMIENTO DEL ARCHIVO (CON LOTES)
     // ==========================================
     async function procesarArchivo() {
         const fileInput = document.getElementById('csvFile');
@@ -124,55 +124,53 @@
             complete: async function(results) {
                 const filas = results.data;
                 
-                mostrarMensaje(`Archivo leído. Preparando ${filas.length} registros para ${paqueteriaSeleccionada}...`, "info");
-
-                // EL TRADUCTOR: Transformamos el CSV crudo al molde limpio de Supabase
+                // EL TRADUCTOR: Transformamos el CSV crudo al molde limpio
                 const datosLimpios = filas.map(fila => {
-                    
                     let dataMapeada = {
                         tracking_number: fila.tracking_number ? String(fila.tracking_number) : 'Sin Tracking',
                         paqueteria: paqueteriaSeleccionada,
-                        detalles_extra: fila // Todo el CSV crudo se guarda en JSON por si acaso
+                        detalles_extra: fila 
                     };
 
-                    // Si es FedEx, mapeamos sus columnas específicas
                     if (paqueteriaSeleccionada === 'FedEx') {
                         dataMapeada.fecha_envio = formatoFechaDB(fila.created_at);
                         dataMapeada.fecha_entrega = formatoFechaDB(fila.delivered_at);
                         dataMapeada.destinatario = fila.consignee_name;
                         dataMapeada.ciudad = fila.consignee_city;
                         dataMapeada.estado_destino = fila.consignee_state;
-                        // Tomamos el status o lo estandarizamos
                         dataMapeada.estatus_entrega = fila.status;
-                        
-                        // En tu CSV, cash_on_delivery_amount es el cobro. 
                         dataMapeada.monto_cobrado = Number(fila.cash_on_delivery_amount) || 0;
-                        
-                        // En tu CSV, el producto viene a veces en "products" o "name" o "shipment_type"
                         dataMapeada.producto = fila.products || fila.name || 'No especificado';
                     }
-                    
-                    // Aquí en el futuro agregaremos el "if (paqueteriaSeleccionada === 'Afimex')"
-
                     return dataMapeada;
                 });
 
-                // Mandamos los datos a Supabase
-                mostrarMensaje("Guardando en la base de datos... Por favor espera.", "info");
-                
-               const { data, error } = await clienteSupabase
-                    .from('paquetes_enviados')
-                    .upsert(datosLimpios, { onConflict: 'tracking_number' });
+                // --- NUEVA LÓGICA DE LOTES (CHUNKS) ---
+                const tamañoLote = 500; // Mandamos de 500 en 500
+                let errores = 0;
 
-                if (error) {
-                    console.error(error);
-                    mostrarMensaje("Error al subir a Base de Datos: " + error.message, "error");
-                    btn.disabled = false;
-                } else {
-                    mostrarMensaje(`¡Éxito! Se subieron ${filas.length} paquetes a la base de datos.`, "success");
-                    fileInput.value = ""; // Limpiamos el input
-                    btn.disabled = false;
+                mostrarMensaje(`Subiendo ${datosLimpios.length} registros en lotes de ${tamañoLote}...`, "info");
+
+                for (let i = 0; i < datosLimpios.length; i += tamañoLote) {
+                    const lote = datosLimpios.slice(i, i + tamañoLote);
+                    
+                    const { error } = await clienteSupabase
+                        .from('paquetes_enviados')
+                        .upsert(lote, { onConflict: 'tracking_number' });
+
+                    if (error) {
+                        console.error("Error en el lote", i, error);
+                        errores++;
+                    }
                 }
+
+                if (errores > 0) {
+                    mostrarMensaje(`Proceso terminado con ${errores} error(es) en algunos lotes. Revisa la consola (F12).`, "error");
+                } else {
+                    mostrarMensaje(`¡Éxito! Se subieron/actualizaron ${filas.length} paquetes correctamente.`, "success");
+                    fileInput.value = ""; 
+                }
+                btn.disabled = false;
             },
             error: function(err) {
                 mostrarMensaje("Error leyendo el CSV: " + err.message, "error");
