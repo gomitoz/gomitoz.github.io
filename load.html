@@ -102,18 +102,21 @@
     };
 
     // ==========================================
-    // EL "TRADUCTOR" DE FECHAS MEJORADO
+    // EL "TRADUCTOR" DE FECHAS MEJORADO (Blindado)
     // ==========================================
     function formatoFechaDB(fechaTexto) {
-        if (!fechaTexto) return null;
+        // 1. Si está vacío o no es texto, regresamos null pacíficamente
+        if (!fechaTexto || typeof fechaTexto !== 'string') return null;
+        
         fechaTexto = fechaTexto.trim().replace('T', ' ');
+        if (fechaTexto === '' || fechaTexto.includes('NaN')) return null;
 
-        // Si ya viene en formato de Base de Datos (YYYY-MM-DD...)
+        // 2. Si ya viene en formato de Base de Datos (YYYY-MM-DD...)
         if (fechaTexto.match(/^\d{4}-\d{2}-\d{2}/)) {
             return fechaTexto; 
         }
         
-        // Si viene en formato Excel mexicano (DD/MM/YYYY...)
+        // 3. Si viene en formato Excel mexicano (DD/MM/YYYY...)
         const partes = fechaTexto.split(/[\s/:-]+/); 
         if (partes.length >= 3) {
             let dia = partes[0];
@@ -126,15 +129,26 @@
                 dia = partes[2];
             }
             
+            // EL BLINDAJE: Validar que realmente sean números y no basura
+            if (isNaN(dia) || isNaN(mes) || isNaN(anio) || anio.includes('NaN')) {
+                return null;
+            }
+
             let hora = partes[3] || '00';
             let minuto = partes[4] || '00';
             let segundo = partes[5] || '00';
 
+            // Aseguramos que tengan el formato correcto de 2 dígitos (ej. 05 en vez de 5)
+            dia = dia.padStart(2, '0');
+            mes = mes.padStart(2, '0');
+            hora = hora.padStart(2, '0');
+            minuto = minuto.padStart(2, '0');
+            segundo = segundo.padStart(2, '0');
+
             return `${anio}-${mes}-${dia}T${hora}:${minuto}:${segundo}`;
         }
-        return null;
+        return null; // Si no cumplió nada de lo anterior, es nulo
     }
-
     // ==========================================
     // PROCESAMIENTO DEL ARCHIVO 
     // ==========================================
