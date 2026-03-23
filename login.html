@@ -47,11 +47,11 @@
     // ==========================================
     // CONFIGURACIÓN DE SUPABASE
     // ==========================================
-    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU';
+    const SUPABASE_URL = 'TU_PROJECT_URL_AQUI'; // Pega tu URL aquí
+    const SUPABASE_ANON_KEY = 'TU_ANON_KEY_AQUI'; // Pega tu llave aquí
 
-    // Inicializamos el cliente
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // SOLUCIÓN: Usamos "clienteSupabase" para evitar el bloqueo del navegador
+    const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ==========================================
     // FUNCIONES DE AUTENTICACIÓN
@@ -70,18 +70,23 @@
         msg.innerText = "Conectando...";
         msg.className = "";
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        // Usamos clienteSupabase
+        const { data, error } = await clienteSupabase.auth.signInWithPassword({
             email: email,
             password: password,
         });
 
         if (error) {
-            msg.innerText = "Error: " + error.message;
+            // Traducimos el error clásico de credenciales inválidas
+            if(error.message === "Invalid login credentials") {
+                msg.innerText = "Error: Correo o contraseña incorrectos.";
+            } else {
+                msg.innerText = "Error: " + error.message;
+            }
             msg.className = "";
         } else {
             msg.innerText = "¡Acceso concedido! Redirigiendo...";
             msg.className = "success";
-            // Redirigimos al Dashboard después de 1 segundo
             setTimeout(() => {
                 window.location.href = "index.html"; 
             }, 1000);
@@ -102,7 +107,8 @@
         msg.innerText = "Creando cuenta...";
         msg.className = "";
 
-        const { data, error } = await supabase.auth.signUp({
+        // Usamos clienteSupabase
+        const { data, error } = await clienteSupabase.auth.signUp({
             email: email,
             password: password,
         });
@@ -111,7 +117,7 @@
             msg.innerText = "Error al registrar: " + error.message;
             msg.className = "";
         } else {
-            msg.innerText = "¡Cuenta creada! Ya puedes iniciar sesión.";
+            msg.innerText = "¡Cuenta creada! Ya puedes darle al botón de Iniciar Sesión.";
             msg.className = "success";
         }
     }
@@ -119,9 +125,8 @@
     // ==========================================
     // REDIRECCIÓN AUTOMÁTICA
     // ==========================================
-    // Si el usuario ya había iniciado sesión antes, lo mandamos directo al Dashboard
     async function revisarSesion() {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await clienteSupabase.auth.getSession();
         if (session) {
             window.location.href = "index.html";
         }
@@ -129,6 +134,8 @@
     revisarSesion();
 
 </script>
+</body>
+</html>
 
 </body>
 </html>
