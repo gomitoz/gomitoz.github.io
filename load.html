@@ -86,9 +86,6 @@
         box.style.display = 'block';
     }
 
-    // ==========================================
-    // DICCIONARIO DE ESTADOS DE MÉXICO
-    // ==========================================
     const diccionarioEstados = {
         "AG": "Aguascalientes", "BC": "Baja California", "BS": "Baja California Sur",
         "CA": "Campeche", "CS": "Chiapas", "CH": "Chihuahua", "CM": "Ciudad de México", 
@@ -102,34 +99,39 @@
     };
 
     // ==========================================
-    // EL "TRADUCTOR" DE FECHAS MEJORADO (Blindado)
+    // LIMPIEZA DE BASURA DE EXCEL (NUEVO)
+    // ==========================================
+    function limpiarExcel(texto) {
+        if (!texto) return '';
+        // Esta línea quita los signos de igual y comillas: ="texto" -> texto
+        return String(texto).replace(/[="]/g, '').trim();
+    }
+
+    // ==========================================
+    // EL "TRADUCTOR" DE FECHAS MEJORADO
     // ==========================================
     function formatoFechaDB(fechaTexto) {
-        // 1. Si está vacío o no es texto, regresamos null pacíficamente
-        if (!fechaTexto || typeof fechaTexto !== 'string') return null;
+        if (!fechaTexto) return null;
         
-        fechaTexto = fechaTexto.trim().replace('T', ' ');
+        // Pasamos la fecha por la aspiradora primero
+        fechaTexto = limpiarExcel(fechaTexto).replace('T', ' ');
         if (fechaTexto === '' || fechaTexto.includes('NaN')) return null;
 
-        // 2. Si ya viene en formato de Base de Datos (YYYY-MM-DD...)
         if (fechaTexto.match(/^\d{4}-\d{2}-\d{2}/)) {
             return fechaTexto; 
         }
         
-        // 3. Si viene en formato Excel mexicano (DD/MM/YYYY...)
         const partes = fechaTexto.split(/[\s/:-]+/); 
         if (partes.length >= 3) {
             let dia = partes[0];
             let mes = partes[1];
             let anio = partes[2];
             
-            // Si por alguna razón el año viene al principio
             if (anio.length !== 4 && dia.length === 4) {
                 anio = partes[0];
                 dia = partes[2];
             }
             
-            // EL BLINDAJE: Validar que realmente sean números y no basura
             if (isNaN(dia) || isNaN(mes) || isNaN(anio) || anio.includes('NaN')) {
                 return null;
             }
@@ -138,17 +140,17 @@
             let minuto = partes[4] || '00';
             let segundo = partes[5] || '00';
 
-            // Aseguramos que tengan el formato correcto de 2 dígitos (ej. 05 en vez de 5)
-            dia = dia.padStart(2, '0');
-            mes = mes.padStart(2, '0');
-            hora = hora.padStart(2, '0');
-            minuto = minuto.padStart(2, '0');
-            segundo = segundo.padStart(2, '0');
+            dia = String(dia).padStart(2, '0');
+            mes = String(mes).padStart(2, '0');
+            hora = String(hora).padStart(2, '0');
+            minuto = String(minuto).padStart(2, '0');
+            segundo = String(segundo).padStart(2, '0');
 
             return `${anio}-${mes}-${dia}T${hora}:${minuto}:${segundo}`;
         }
-        return null; // Si no cumplió nada de lo anterior, es nulo
+        return null;
     }
+
     // ==========================================
     // PROCESAMIENTO DEL ARCHIVO 
     // ==========================================
@@ -162,7 +164,7 @@
             return;
         }
 
-        const seguro = confirm(`¿Estás seguro que deseas cargar la información de ${paqueteriaSeleccionada}? \n\nRevisa que el archivo corresponda a esta paquetería.`);
+        const seguro = confirm(`¿Estás seguro que deseas cargar la información de ${paqueteriaSeleccionada}?`);
         if (!seguro) return; 
 
         btn.disabled = true;
@@ -174,15 +176,10 @@
             complete: async function(results) {
                 const filas = results.data;
                 
-                // --- LAS 3 LÍNEAS CHISMOSAS (Agrégalas aquí) ---
-                console.log("1. Fila completa leída del Excel:", filas[0]);
-                console.log("2. Lo que lee en created_at:", filas[0].created_at);
-                console.log("3. Resultado del traductor:", formatoFechaDB(filas[0].created_at));
-                // ----------------------------------------------
-
                 const datosLimpios = filas.map(fila => {
                     let dataMapeada = {
-                        tracking_number: fila.tracking_number ? String(fila.tracking_number) : 'Sin Tracking',
+                        // Limpiamos el tracking number también!
+                        tracking_number: fila.tracking_number ? limpiarExcel(fila.tracking_number) : 'Sin Tracking',
                         paqueteria: paqueteriaSeleccionada,
                         detalles_extra: fila 
                     };
@@ -190,16 +187,15 @@
                     if (paqueteriaSeleccionada === 'FedEx') {
                         dataMapeada.fecha_envio = formatoFechaDB(fila.created_at);
                         dataMapeada.fecha_entrega = formatoFechaDB(fila.delivered_at);
-                        dataMapeada.destinatario = fila.consignee_name;
-                        dataMapeada.ciudad = fila.consignee_city;
+                        dataMapeada.destinatario = limpiarExcel(fila.consignee_name);
+                        dataMapeada.ciudad = limpiarExcel(fila.consignee_city);
                         
-                        // Traductor inteligente de Estados
-                        let estadoAbrev = fila.consignee_state ? fila.consignee_state.trim().toUpperCase() : '';
-                        dataMapeada.estado_destino = diccionarioEstados[estadoAbrev] || estadoAbrev; // Si no lo reconoce, deja el original
+                        let estadoAbrev = limpiarExcel(fila.consignee_state).toUpperCase();
+                        dataMapeada.estado_destino = diccionarioEstados[estadoAbrev] || estadoAbrev; 
                         
-                        dataMapeada.estatus_entrega = fila.status;
-                        dataMapeada.monto_cobrado = Number(fila.cash_on_delivery_amount) || 0;
-                        dataMapeada.producto = fila.products || fila.name || 'No especificado';
+                        dataMapeada.estatus_entrega = limpiarExcel(fila.status);
+                        dataMapeada.monto_cobrado = Number(limpiarExcel(fila.cash_on_delivery_amount)) || 0;
+                        dataMapeada.producto = limpiarExcel(fila.products || fila.name) || 'No especificado';
                     }
                     return dataMapeada;
                 });
@@ -207,7 +203,7 @@
                 const tamañoLote = 500; 
                 let errores = 0;
 
-                mostrarMensaje(`Actualizando ${datosLimpios.length} registros en lotes de ${tamañoLote}...`, "info");
+                mostrarMensaje(`Actualizando ${datosLimpios.length} registros...`, "info");
 
                 for (let i = 0; i < datosLimpios.length; i += tamañoLote) {
                     const lote = datosLimpios.slice(i, i + tamañoLote);
