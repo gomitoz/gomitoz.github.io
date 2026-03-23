@@ -64,11 +64,10 @@
     // ==========================================
     // CONFIGURACIÓN DE SUPABASE
     // ==========================================
-    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
+    const SUPABASE_URL = 'TU_PROJECT_URL_AQUI'; 
+    const SUPABASE_ANON_KEY = 'TU_ANON_KEY_AQUI'; 
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Seguridad: Verificar sesión al entrar
     async function verificarAcceso() {
         const { data: { session }, error } = await clienteSupabase.auth.getSession();
         if (!session || error) window.location.href = "login.html";
@@ -80,7 +79,6 @@
         window.location.href = "login.html";
     }
 
-    // Mostrar mensajes en pantalla
     function mostrarMensaje(texto, tipo) {
         const box = document.getElementById('statusBox');
         box.innerText = texto;
@@ -89,42 +87,70 @@
     }
 
     // ==========================================
-    // EL "TRADUCTOR" DE FECHAS
+    // DICCIONARIO DE ESTADOS DE MÉXICO
     // ==========================================
-    // Convierte "20/03/2026 12:38" a "2026-03-20T12:38:00" para que PostgreSQL lo acepte
+    const diccionarioEstados = {
+        "AG": "Aguascalientes", "BC": "Baja California", "BS": "Baja California Sur",
+        "CA": "Campeche", "CS": "Chiapas", "CH": "Chihuahua", "CM": "Ciudad de México", 
+        "CX": "Ciudad de México", "DF": "Ciudad de México", "CO": "Coahuila", "CL": "Colima", 
+        "DG": "Durango", "EM": "Estado de México", "ME": "Estado de México", "GT": "Guanajuato", 
+        "GR": "Guerrero", "HG": "Hidalgo", "JA": "Jalisco", "MI": "Michoacán", "MO": "Morelos", 
+        "NA": "Nayarit", "NL": "Nuevo León", "OA": "Oaxaca", "PU": "Puebla", "QT": "Querétaro", 
+        "QR": "Quintana Roo", "SL": "San Luis Potosí", "SI": "Sinaloa", "SO": "Sonora", 
+        "TB": "Tabasco", "TM": "Tamaulipas", "TL": "Tlaxcala", "VE": "Veracruz", 
+        "YU": "Yucatán", "ZA": "Zacatecas"
+    };
+
+    // ==========================================
+    // EL "TRADUCTOR" DE FECHAS MEJORADO
+    // ==========================================
     function formatoFechaDB(fechaTexto) {
         if (!fechaTexto) return null;
-        const partes = fechaTexto.split(/[\s/:]+/); 
-        if (partes.length >= 5) {
-            // partes[0]=DD, partes[1]=MM, partes[2]=YYYY, partes[3]=HH, partes[4]=MM
-            return `${partes[2]}-${partes[1]}-${partes[0]}T${partes[3]}:${partes[4]}:00`;
+        fechaTexto = fechaTexto.trim().replace('T', ' ');
+
+        // Si ya viene en formato de Base de Datos (YYYY-MM-DD...)
+        if (fechaTexto.match(/^\d{4}-\d{2}-\d{2}/)) {
+            return fechaTexto; 
+        }
+        
+        // Si viene en formato Excel mexicano (DD/MM/YYYY...)
+        const partes = fechaTexto.split(/[\s/:-]+/); 
+        if (partes.length >= 3) {
+            let dia = partes[0];
+            let mes = partes[1];
+            let anio = partes[2];
+            
+            // Si por alguna razón el año viene al principio
+            if (anio.length !== 4 && dia.length === 4) {
+                anio = partes[0];
+                dia = partes[2];
+            }
+            
+            let hora = partes[3] || '00';
+            let minuto = partes[4] || '00';
+            let segundo = partes[5] || '00';
+
+            return `${anio}-${mes}-${dia}T${hora}:${minuto}:${segundo}`;
         }
         return null;
     }
 
-   // ==========================================
-    // PROCESAMIENTO DEL ARCHIVO (CON LOTES Y VALIDACIÓN)
+    // ==========================================
+    // PROCESAMIENTO DEL ARCHIVO 
     // ==========================================
     async function procesarArchivo() {
         const fileInput = document.getElementById('csvFile');
         const paqueteriaSeleccionada = document.getElementById('paqueteria').value;
         const btn = document.getElementById('btnSubir');
 
-        // 1. Validar que haya archivo
         if (!fileInput.files.length) {
             mostrarMensaje("Por favor, selecciona un archivo CSV primero.", "error");
             return;
         }
 
-        // 2. NUEVO: Alerta de confirmación (Poka-yoke)
-        const seguro = confirm(`¿Estás seguro que deseas cargar la información de ${paqueteriaSeleccionada}? \n\nRevisa que el archivo seleccionado corresponda a esta paquetería.`);
-        
-        // Si el usuario le da a "Cancelar", detenemos todo aquí mismo.
-        if (!seguro) {
-            return; 
-        }
+        const seguro = confirm(`¿Estás seguro que deseas cargar la información de ${paqueteriaSeleccionada}? \n\nRevisa que el archivo corresponda a esta paquetería.`);
+        if (!seguro) return; 
 
-        // Si le da a "Aceptar", continuamos con el proceso...
         btn.disabled = true;
         mostrarMensaje("Leyendo archivo...", "info");
 
@@ -134,7 +160,6 @@
             complete: async function(results) {
                 const filas = results.data;
                 
-                // EL TRADUCTOR
                 const datosLimpios = filas.map(fila => {
                     let dataMapeada = {
                         tracking_number: fila.tracking_number ? String(fila.tracking_number) : 'Sin Tracking',
@@ -147,7 +172,11 @@
                         dataMapeada.fecha_entrega = formatoFechaDB(fila.delivered_at);
                         dataMapeada.destinatario = fila.consignee_name;
                         dataMapeada.ciudad = fila.consignee_city;
-                        dataMapeada.estado_destino = fila.consignee_state;
+                        
+                        // Traductor inteligente de Estados
+                        let estadoAbrev = fila.consignee_state ? fila.consignee_state.trim().toUpperCase() : '';
+                        dataMapeada.estado_destino = diccionarioEstados[estadoAbrev] || estadoAbrev; // Si no lo reconoce, deja el original
+                        
                         dataMapeada.estatus_entrega = fila.status;
                         dataMapeada.monto_cobrado = Number(fila.cash_on_delivery_amount) || 0;
                         dataMapeada.producto = fila.products || fila.name || 'No especificado';
@@ -155,11 +184,10 @@
                     return dataMapeada;
                 });
 
-                // LÓGICA DE LOTES (CHUNKS)
                 const tamañoLote = 500; 
                 let errores = 0;
 
-                mostrarMensaje(`Subiendo ${datosLimpios.length} registros en lotes de ${tamañoLote}...`, "info");
+                mostrarMensaje(`Actualizando ${datosLimpios.length} registros en lotes de ${tamañoLote}...`, "info");
 
                 for (let i = 0; i < datosLimpios.length; i += tamañoLote) {
                     const lote = datosLimpios.slice(i, i + tamañoLote);
@@ -175,9 +203,9 @@
                 }
 
                 if (errores > 0) {
-                    mostrarMensaje(`Proceso terminado con ${errores} error(es) en algunos lotes. Revisa la consola.`, "error");
+                    mostrarMensaje(`Proceso terminado con ${errores} error(es). Revisa la consola.`, "error");
                 } else {
-                    mostrarMensaje(`¡Éxito! Se subieron/actualizaron ${filas.length} paquetes de ${paqueteriaSeleccionada} correctamente.`, "success");
+                    mostrarMensaje(`¡Éxito! Se actualizaron ${filas.length} paquetes correctamente.`, "success");
                     fileInput.value = ""; 
                 }
                 btn.disabled = false;
@@ -189,6 +217,7 @@
         });
     }
 </script>
+
 
 </body>
 </html>
