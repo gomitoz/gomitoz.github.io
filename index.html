@@ -6,26 +6,32 @@
     <title>Dashboard Logístico: Envíos vs Entregas</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1000px; margin: 0 auto; }
         
-        /* Cabecera con botón de salir */
+        /* Cabecera */
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
         h1 { color: #2c3e50; margin: 0; }
+        .botones-header { display: flex; gap: 10px; }
+        
+        /* Botones */
+        .btn-cargar { padding: 8px 15px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 0.9em; }
+        .btn-cargar:hover { background: #2980b9; }
         .btn-salir { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-salir:hover { background: #c0392b; }
 
         .card { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 30px; }
         .card-header { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
         .chart-container { position: relative; height: 400px; width: 100%; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
         th { background-color: #2c3e50; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
+        
         .kpi-container { display: flex; justify-content: space-around; margin-bottom: 20px; flex-wrap: wrap; }
         .kpi-box { background: #fff; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; margin: 10px; min-width: 200px; }
         .kpi-value { font-size: 2em; font-weight: bold; color: #2980b9; }
@@ -42,7 +48,10 @@
 <div class="container">
     <div class="header-top">
         <h1>Dashboard Operativo</h1>
-        <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
+        <div class="botones-header">
+            <a href="carga.html" class="btn-cargar">Cargar Datos</a>
+            <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
     </div>
 
     <div id="statusMessage" class="status-loading">
@@ -66,7 +75,7 @@
         </div>
 
         <div class="card">
-            <div class="card-header">Visualización Semanal</div>
+            <div class="card-header">Rendimiento por Mes</div>
             <div class="chart-container">
                 <canvas id="shippingChart"></canvas>
             </div>
@@ -91,22 +100,19 @@
 
 <script>
     // ==========================================
-    // 1. CONFIGURACIÓN (REEMPLAZA ESTAS 3 LÍNEAS)
+    // CONFIGURACIÓN SUPABASE (¡PEGA TUS LLAVES AQUÍ!)
     // ==========================================
-    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
-    const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv'; 
+    const SUPABASE_URL = 'TU_PROJECT_URL_AQUI'; 
+    const SUPABASE_ANON_KEY = 'TU_ANON_KEY_AQUI'; 
 
-    // SOLUCIÓN AQUÍ: Cambiamos el nombre de la variable a "clienteSupabase"
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let myChart = null; // Para guardar la gráfica y evitar duplicados
 
     // ==========================================
-    // 2. LÓGICA DE SEGURIDAD
+    // LÓGICA DE SEGURIDAD
     // ==========================================
     async function iniciarSistema() {
         const statusDiv = document.getElementById('statusMessage');
-        
-        // Usamos la nueva variable clienteSupabase
         const { data: { session }, error } = await clienteSupabase.auth.getSession();
         
         if (!session || error) {
@@ -114,71 +120,93 @@
             return; 
         }
 
-        statusDiv.innerText = "Conectando con Google Sheets...";
-        cargarDatosGoogleSheets();
+        statusDiv.innerText = "Descargando métricas desde Supabase...";
+        cargarDatosSupabase();
     }
 
     async function cerrarSesion() {
-        // Usamos la nueva variable clienteSupabase
         await clienteSupabase.auth.signOut();
         window.location.href = "login.html";
     }
 
     // ==========================================
-    // 3. LÓGICA DE DATOS Y GRÁFICAS
+    // EXTRACCIÓN Y AGRUPACIÓN DE DATOS (BUSINESS INTELLIGENCE)
     // ==========================================
-    async function cargarDatosGoogleSheets() {
-        if(GOOGLE_SHEET_CSV_URL === 'TU_ENLACE_CSV_DE_GOOGLE_SHEETS_AQUI' || GOOGLE_SHEET_CSV_URL.length < 10) {
-            showError("¡Falta el enlace de Google Sheets!");
-            return;
-        }
-
+    async function cargarDatosSupabase() {
         try {
-            const response = await fetch(GOOGLE_SHEET_CSV_URL);
-            if (!response.ok) throw new Error(`Error de conexión (${response.status})`);
-            
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("text/html")) throw new Error("El enlace es incorrecto. Parece ser una página web, no un CSV.");
+            // Traemos los datos de Supabase (hasta 10,000 registros para estar seguros)
+            const { data, error } = await clienteSupabase
+                .from('paquetes_enviados')
+                .select('fecha_envio, estatus_entrega')
+                .limit(10000);
 
-            const csvText = await response.text();
+            if (error) throw error;
 
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                dynamicTyping: true,
-                complete: function(results) {
-                    const data = results.data;
-                    if(data.length > 0 && (!data[0].hasOwnProperty('Periodo') || !data[0].hasOwnProperty('Enviados'))) {
-                        showError("Columnas incorrectas en CSV.");
-                        return;
-                    }
-                    renderDashboard(data);
-                },
-                error: function(err) { throw new Error(err.message); }
+            if (!data || data.length === 0) {
+                showError("No hay paquetes registrados. ¡Ve a Cargar Datos!");
+                return;
+            }
+
+            // Agrupamos los datos por Año-Mes
+            const agrupado = {};
+
+            data.forEach(paquete => {
+                if (!paquete.fecha_envio) return;
+
+                // Extraer YYYY-MM
+                const fecha = new Date(paquete.fecha_envio);
+                const año = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const periodo = `${año}-${mes}`; // Ej: 2026-03
+
+                // Inicializamos el mes si no existe
+                if (!agrupado[periodo]) {
+                    agrupado[periodo] = { Periodo: periodo, Enviados: 0, Entregados: 0 };
+                }
+
+                // Sumamos 1 enviado
+                agrupado[periodo].Enviados++;
+
+                // Validamos si está entregado
+                const estatus = (paquete.estatus_entrega || '').toLowerCase();
+                if (estatus.includes('delivered') || estatus.includes('entregado')) {
+                    agrupado[periodo].Entregados++;
+                }
             });
+
+            // Convertimos el objeto a un arreglo y lo ordenamos por fecha
+            const dataFinal = Object.values(agrupado).sort((a, b) => a.Periodo.localeCompare(b.Periodo));
+            
+            renderDashboard(dataFinal);
+
         } catch (error) {
-            showError(error.message);
+            showError("Error conectando a base de datos: " + error.message);
         }
     }
 
     function showError(msg) {
         const el = document.getElementById('statusMessage');
         el.className = 'status-error';
-        el.innerHTML = `<strong>Error:</strong><br>${msg}`;
+        el.style.display = 'block';
+        el.innerHTML = `<strong>Atención:</strong><br>${msg}`;
+        document.getElementById('dashboardContent').style.display = 'none';
     }
 
+    // ==========================================
+    // RENDERIZADO VISUAL
+    // ==========================================
     function renderDashboard(rawData) {
         document.getElementById('statusMessage').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
 
         let sumSent = 0, sumDelivered = 0;
         const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = ''; // Limpiar tabla vieja
         const labels = [], sentData = [], deliveredData = [];
 
         rawData.forEach(row => {
-            if(!row.Periodo) return;
-            const env = Number(row.Enviados) || 0;
-            const entr = Number(row.Entregados) || 0;
+            const env = row.Enviados;
+            const entr = row.Entregados;
             const percent = env > 0 ? ((entr / env) * 100).toFixed(1) + '%' : '0%';
 
             labels.push(row.Periodo);
@@ -196,7 +224,12 @@
         document.getElementById('totalDelivered').innerText = sumDelivered.toLocaleString();
         document.getElementById('efficiency').innerText = sumSent > 0 ? ((sumDelivered / sumSent) * 100).toFixed(1) + '%' : '0%';
 
-        new Chart(document.getElementById('shippingChart'), {
+        // Si ya existe una gráfica, la destruimos para no encimar
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(document.getElementById('shippingChart'), {
             type: 'bar',
             data: {
                 labels: labels,
