@@ -59,6 +59,105 @@
     </div>
 
     <div id="dashboardContent" style="display:none;">
+        <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <strong style="color: #2c3e50;">Filtrar por Mes:</strong>
+            
+            <label style="color: #7f8c8d; margin-left: 10px;">Desde:</label>
+            <input type="month" id="mesInicio" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;">
+            
+            <label style="color: #7f8c8d;">Hasta:</label>
+            <input type="month" id="mesFin" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;">
+            
+            <button onclick="cargarDatosSupabase()" style="padding: 8px 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Aplicar Filtro</button>
+            <button onclick="limpiarFiltros()" style="padding: 8px 15px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Ver Todo</button>
+        </div>
+        ```
+
+### 2. Actualiza la Lógica de Búsqueda (Javascript)
+Ahora necesitamos decirle a Supabase que ya no queremos "todo", sino solo lo que caiga en esas fechas.
+
+Baja a tu bloque `<script>` y **reemplaza tu función `cargarDatosSupabase()`** por esta nueva versión, y de paso agregamos la función para limpiar los filtros:
+
+```javascript
+    // ==========================================
+    // EXTRACCIÓN Y FILTRADO DE DATOS
+    // ==========================================
+    async function cargarDatosSupabase() {
+        try {
+            document.getElementById('statusMessage').innerText = "Consultando base de datos...";
+            document.getElementById('statusMessage').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+
+            // 1. Leemos qué fechas seleccionó el usuario
+            const mesInicio = document.getElementById('mesInicio').value; // Formato YYYY-MM
+            const mesFin = document.getElementById('mesFin').value;
+
+            // 2. Preparamos la consulta base
+            let consulta = clienteSupabase
+                .from('paquetes_enviados')
+                .select('fecha_envio, estatus_entrega')
+                .limit(10000);
+
+            // 3. Si eligió fecha de inicio, le decimos a Supabase que traiga mayores o iguales al día 1
+            if (mesInicio) {
+                consulta = consulta.gte('fecha_envio', `${mesInicio}-01T00:00:00`);
+            }
+
+            // 4. Si eligió fecha de fin, calculamos el último día de ese mes
+            if (mesFin) {
+                const [anio, mes] = mesFin.split('-');
+                const ultimoDia = new Date(anio, mes, 0).getDate(); // Saca si el mes trae 28, 30 o 31 días
+                consulta = consulta.lte('fecha_envio', `${mesFin}-${ultimoDia}T23:59:59`);
+            }
+
+            // 5. ¡Disparamos la búsqueda!
+            const { data, error } = await consulta;
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                showError("No se encontraron paquetes en este rango de fechas.");
+                return;
+            }
+
+            // Agrupamos los datos por Año-Mes
+            const agrupado = {};
+
+            data.forEach(paquete => {
+                if (!paquete.fecha_envio) return;
+
+                const fecha = new Date(paquete.fecha_envio);
+                const año = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const periodo = `${año}-${mes}`; 
+
+                if (!agrupado[periodo]) {
+                    agrupado[periodo] = { Periodo: periodo, Enviados: 0, Entregados: 0 };
+                }
+
+                agrupado[periodo].Enviados++;
+
+                const estatus = (paquete.estatus_entrega || '').toLowerCase();
+                if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
+                    agrupado[periodo].Entregados++;
+                }
+            });
+
+            const dataFinal = Object.values(agrupado).sort((a, b) => a.Periodo.localeCompare(b.Periodo));
+            
+            renderDashboard(dataFinal);
+
+        } catch (error) {
+            showError("Error conectando a base de datos: " + error.message);
+        }
+    }
+
+    // Función para borrar los filtros y ver todo de nuevo
+    function limpiarFiltros() {
+        document.getElementById('mesInicio').value = '';
+        document.getElementById('mesFin').value = '';
+        cargarDatosSupabase();
+    }
         <div class="kpi-container">
             <div class="kpi-box">
                 <div class="kpi-value" id="totalSent">0</div>
