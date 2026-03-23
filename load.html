@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carga de Archivos - Operaciones</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        h1 { color: #2c3e50; margin-top: 0; text-align: center; }
+        .header-links { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.9em; }
+        .header-links a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .header-links a:hover { text-decoration: underline; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        select, input[type="file"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1em; }
+        
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1em; font-weight: bold; background-color: #27ae60; color: white; transition: background 0.3s; }
+        .btn:hover { background-color: #219150; }
+        .btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        #statusBox { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; font-weight: bold; text-align: center; }
+        .status-info { background-color: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
+        .status-success { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .status-error { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-links">
+        <a href="index.html">← Regresar al Dashboard</a>
+        <a href="#" onclick="cerrarSesion()">Cerrar Sesión</a>
+    </div>
+
+    <h1>Cargar Envíos</h1>
+
+    <div class="form-group">
+        <label for="paqueteria">Selecciona la Paquetería:</label>
+        <select id="paqueteria">
+            <option value="FedEx">FedEx</option>
+            <option value="Afimex">Afimex</option>
+            <option value="Local">Entrega Local</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="csvFile">Sube el archivo (.csv):</label>
+        <input type="file" id="csvFile" accept=".csv">
+    </div>
+
+    <button id="btnSubir" class="btn" onclick="procesarArchivo()">Subir Información a Base de Datos</button>
+
+    <div id="statusBox"></div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURACIÓN DE SUPABASE
+    // ==========================================
+    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
+    const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Seguridad: Verificar sesión al entrar
+    async function verificarAcceso() {
+        const { data: { session }, error } = await clienteSupabase.auth.getSession();
+        if (!session || error) window.location.href = "login.html";
+    }
+    verificarAcceso();
+
+    async function cerrarSesion() {
+        await clienteSupabase.auth.signOut();
+        window.location.href = "login.html";
+    }
+
+    // Mostrar mensajes en pantalla
+    function mostrarMensaje(texto, tipo) {
+        const box = document.getElementById('statusBox');
+        box.innerText = texto;
+        box.className = 'status-' + tipo;
+        box.style.display = 'block';
+    }
+
+    // ==========================================
+    // EL "TRADUCTOR" DE FECHAS
+    // ==========================================
+    // Convierte "20/03/2026 12:38" a "2026-03-20T12:38:00" para que PostgreSQL lo acepte
+    function formatoFechaDB(fechaTexto) {
+        if (!fechaTexto) return null;
+        const partes = fechaTexto.split(/[\s/:]+/); 
+        if (partes.length >= 5) {
+            // partes[0]=DD, partes[1]=MM, partes[2]=YYYY, partes[3]=HH, partes[4]=MM
+            return `${partes[2]}-${partes[1]}-${partes[0]}T${partes[3]}:${partes[4]}:00`;
+        }
+        return null;
+    }
+
+    // ==========================================
+    // PROCESAMIENTO DEL ARCHIVO
+    // ==========================================
+    async function procesarArchivo() {
+        const fileInput = document.getElementById('csvFile');
+        const paqueteriaSeleccionada = document.getElementById('paqueteria').value;
+        const btn = document.getElementById('btnSubir');
+
+        if (!fileInput.files.length) {
+            mostrarMensaje("Por favor, selecciona un archivo CSV primero.", "error");
+            return;
+        }
+
+        btn.disabled = true;
+        mostrarMensaje("Leyendo archivo...", "info");
+
+        Papa.parse(fileInput.files[0], {
+            header: true,
+            skipEmptyLines: true,
+            complete: async function(results) {
+                const filas = results.data;
+                
+                mostrarMensaje(`Archivo leído. Preparando ${filas.length} registros para ${paqueteriaSeleccionada}...`, "info");
+
+                // EL TRADUCTOR: Transformamos el CSV crudo al molde limpio de Supabase
+                const datosLimpios = filas.map(fila => {
+                    
+                    let dataMapeada = {
+                        tracking_number: fila.tracking_number ? String(fila.tracking_number) : 'Sin Tracking',
+                        paqueteria: paqueteriaSeleccionada,
+                        detalles_extra: fila // Todo el CSV crudo se guarda en JSON por si acaso
+                    };
+
+                    // Si es FedEx, mapeamos sus columnas específicas
+                    if (paqueteriaSeleccionada === 'FedEx') {
+                        dataMapeada.fecha_envio = formatoFechaDB(fila.created_at);
+                        dataMapeada.fecha_entrega = formatoFechaDB(fila.delivered_at);
+                        dataMapeada.destinatario = fila.consignee_name;
+                        dataMapeada.ciudad = fila.consignee_city;
+                        dataMapeada.estado_destino = fila.consignee_state;
+                        // Tomamos el status o lo estandarizamos
+                        dataMapeada.estatus_entrega = fila.status;
+                        
+                        // En tu CSV, cash_on_delivery_amount es el cobro. 
+                        dataMapeada.monto_cobrado = Number(fila.cash_on_delivery_amount) || 0;
+                        
+                        // En tu CSV, el producto viene a veces en "products" o "name" o "shipment_type"
+                        dataMapeada.producto = fila.products || fila.name || 'No especificado';
+                    }
+                    
+                    // Aquí en el futuro agregaremos el "if (paqueteriaSeleccionada === 'Afimex')"
+
+                    return dataMapeada;
+                });
+
+                // Mandamos los datos a Supabase
+                mostrarMensaje("Guardando en la base de datos... Por favor espera.", "info");
+                
+                const { data, error } = await clienteSupabase
+                    .from('paquetes_enviados')
+                    .insert(datosLimpios);
+
+                if (error) {
+                    console.error(error);
+                    mostrarMensaje("Error al subir a Base de Datos: " + error.message, "error");
+                    btn.disabled = false;
+                } else {
+                    mostrarMensaje(`¡Éxito! Se subieron ${filas.length} paquetes a la base de datos.`, "success");
+                    fileInput.value = ""; // Limpiamos el input
+                    btn.disabled = false;
+                }
+            },
+            error: function(err) {
+                mostrarMensaje("Error leyendo el CSV: " + err.message, "error");
+                btn.disabled = false;
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
