@@ -41,6 +41,12 @@
         #statusMessage { text-align: center; padding: 20px; margin: 20px 0; border-radius: 8px; font-weight: bold; }
         .status-loading { background-color: #e3f2fd; color: #0d47a1; }
         .status-error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+
+        /* Estilos del filtro */
+        .filtros-container { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filtros-container input { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit; }
+        .btn-filtro { padding: 8px 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-limpiar { padding: 8px 15px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -49,7 +55,7 @@
     <div class="header-top">
         <h1>Dashboard Operativo</h1>
         <div class="botones-header">
-            <a href="load.html" class="btn-cargar">Cargar más Datos</a>
+            <a href="carga.html" class="btn-cargar">Cargar más Datos</a>
             <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
@@ -59,105 +65,20 @@
     </div>
 
     <div id="dashboardContent" style="display:none;">
-        <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+        
+        <div class="filtros-container">
             <strong style="color: #2c3e50;">Filtrar por Mes:</strong>
             
             <label style="color: #7f8c8d; margin-left: 10px;">Desde:</label>
-            <input type="month" id="mesInicio" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;">
+            <input type="month" id="mesInicio">
             
             <label style="color: #7f8c8d;">Hasta:</label>
-            <input type="month" id="mesFin" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;">
+            <input type="month" id="mesFin">
             
-            <button onclick="cargarDatosSupabase()" style="padding: 8px 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Aplicar Filtro</button>
-            <button onclick="limpiarFiltros()" style="padding: 8px 15px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Ver Todo</button>
+            <button onclick="cargarDatosSupabase()" class="btn-filtro">Aplicar Filtro</button>
+            <button onclick="limpiarFiltros()" class="btn-limpiar">Ver Todo</button>
         </div>
-        ```
 
-### 2. Actualiza la Lógica de Búsqueda (Javascript)
-Ahora necesitamos decirle a Supabase que ya no queremos "todo", sino solo lo que caiga en esas fechas.
-
-Baja a tu bloque `<script>` y **reemplaza tu función `cargarDatosSupabase()`** por esta nueva versión, y de paso agregamos la función para limpiar los filtros:
-
-```javascript
-    // ==========================================
-    // EXTRACCIÓN Y FILTRADO DE DATOS
-    // ==========================================
-    async function cargarDatosSupabase() {
-        try {
-            document.getElementById('statusMessage').innerText = "Consultando base de datos...";
-            document.getElementById('statusMessage').style.display = 'block';
-            document.getElementById('dashboardContent').style.display = 'none';
-
-            // 1. Leemos qué fechas seleccionó el usuario
-            const mesInicio = document.getElementById('mesInicio').value; // Formato YYYY-MM
-            const mesFin = document.getElementById('mesFin').value;
-
-            // 2. Preparamos la consulta base
-            let consulta = clienteSupabase
-                .from('paquetes_enviados')
-                .select('fecha_envio, estatus_entrega')
-                .limit(10000);
-
-            // 3. Si eligió fecha de inicio, le decimos a Supabase que traiga mayores o iguales al día 1
-            if (mesInicio) {
-                consulta = consulta.gte('fecha_envio', `${mesInicio}-01T00:00:00`);
-            }
-
-            // 4. Si eligió fecha de fin, calculamos el último día de ese mes
-            if (mesFin) {
-                const [anio, mes] = mesFin.split('-');
-                const ultimoDia = new Date(anio, mes, 0).getDate(); // Saca si el mes trae 28, 30 o 31 días
-                consulta = consulta.lte('fecha_envio', `${mesFin}-${ultimoDia}T23:59:59`);
-            }
-
-            // 5. ¡Disparamos la búsqueda!
-            const { data, error } = await consulta;
-
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                showError("No se encontraron paquetes en este rango de fechas.");
-                return;
-            }
-
-            // Agrupamos los datos por Año-Mes
-            const agrupado = {};
-
-            data.forEach(paquete => {
-                if (!paquete.fecha_envio) return;
-
-                const fecha = new Date(paquete.fecha_envio);
-                const año = fecha.getFullYear();
-                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-                const periodo = `${año}-${mes}`; 
-
-                if (!agrupado[periodo]) {
-                    agrupado[periodo] = { Periodo: periodo, Enviados: 0, Entregados: 0 };
-                }
-
-                agrupado[periodo].Enviados++;
-
-                const estatus = (paquete.estatus_entrega || '').toLowerCase();
-                if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
-                    agrupado[periodo].Entregados++;
-                }
-            });
-
-            const dataFinal = Object.values(agrupado).sort((a, b) => a.Periodo.localeCompare(b.Periodo));
-            
-            renderDashboard(dataFinal);
-
-        } catch (error) {
-            showError("Error conectando a base de datos: " + error.message);
-        }
-    }
-
-    // Función para borrar los filtros y ver todo de nuevo
-    function limpiarFiltros() {
-        document.getElementById('mesInicio').value = '';
-        document.getElementById('mesFin').value = '';
-        cargarDatosSupabase();
-    }
         <div class="kpi-container">
             <div class="kpi-box">
                 <div class="kpi-value" id="totalSent">0</div>
@@ -199,13 +120,13 @@ Baja a tu bloque `<script>` y **reemplaza tu función `cargarDatosSupabase()`** 
 
 <script>
     // ==========================================
-    // CONFIGURACIÓN SUPABASE (¡PEGA TUS LLAVES AQUÍ!)
+    // CONFIGURACIÓN SUPABASE
     // ==========================================
     const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
 
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    let myChart = null; // Para guardar la gráfica y evitar duplicados
+    let myChart = null; 
 
     // ==========================================
     // LÓGICA DE SEGURIDAD
@@ -229,121 +150,9 @@ Baja a tu bloque `<script>` y **reemplaza tu función `cargarDatosSupabase()`** 
     }
 
     // ==========================================
-    // EXTRACCIÓN Y AGRUPACIÓN DE DATOS (BUSINESS INTELLIGENCE)
+    // EXTRACCIÓN Y FILTRADO DE DATOS
     // ==========================================
     async function cargarDatosSupabase() {
         try {
-            // Traemos los datos de Supabase (hasta 10,000 registros para estar seguros)
-            const { data, error } = await clienteSupabase
-                .from('paquetes_enviados')
-                .select('fecha_envio, estatus_entrega')
-                .limit(10000);
-
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                showError("No hay paquetes registrados. ¡Ve a Cargar Datos!");
-                return;
-            }
-
-            // Agrupamos los datos por Año-Mes
-            const agrupado = {};
-
-            data.forEach(paquete => {
-                if (!paquete.fecha_envio) return;
-
-                // Extraer YYYY-MM
-                const fecha = new Date(paquete.fecha_envio);
-                const año = fecha.getFullYear();
-                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-                const periodo = `${año}-${mes}`; // Ej: 2026-03
-
-                // Inicializamos el mes si no existe
-                if (!agrupado[periodo]) {
-                    agrupado[periodo] = { Periodo: periodo, Enviados: 0, Entregados: 0 };
-                }
-
-                // Sumamos 1 enviado
-                agrupado[periodo].Enviados++;
-
-                // Validamos si está entregado
-                const estatus = (paquete.estatus_entrega || '').toLowerCase();
-                if (estatus.includes('delivered') || estatus.includes('entregado')) {
-                    agrupado[periodo].Entregados++;
-                }
-            });
-
-            // Convertimos el objeto a un arreglo y lo ordenamos por fecha
-            const dataFinal = Object.values(agrupado).sort((a, b) => a.Periodo.localeCompare(b.Periodo));
-            
-            renderDashboard(dataFinal);
-
-        } catch (error) {
-            showError("Error conectando a base de datos: " + error.message);
-        }
-    }
-
-    function showError(msg) {
-        const el = document.getElementById('statusMessage');
-        el.className = 'status-error';
-        el.style.display = 'block';
-        el.innerHTML = `<strong>Atención:</strong><br>${msg}`;
-        document.getElementById('dashboardContent').style.display = 'none';
-    }
-
-    // ==========================================
-    // RENDERIZADO VISUAL
-    // ==========================================
-    function renderDashboard(rawData) {
-        document.getElementById('statusMessage').style.display = 'none';
-        document.getElementById('dashboardContent').style.display = 'block';
-
-        let sumSent = 0, sumDelivered = 0;
-        const tableBody = document.getElementById('tableBody');
-        tableBody.innerHTML = ''; // Limpiar tabla vieja
-        const labels = [], sentData = [], deliveredData = [];
-
-        rawData.forEach(row => {
-            const env = row.Enviados;
-            const entr = row.Entregados;
-            const percent = env > 0 ? ((entr / env) * 100).toFixed(1) + '%' : '0%';
-
-            labels.push(row.Periodo);
-            sentData.push(env);
-            deliveredData.push(entr);
-            sumSent += env;
-            sumDelivered += entr;
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.Periodo}</td><td>${env}</td><td>${entr}</td><td><strong>${percent}</strong></td>`;
-            tableBody.appendChild(tr);
-        });
-
-        document.getElementById('totalSent').innerText = sumSent.toLocaleString();
-        document.getElementById('totalDelivered').innerText = sumDelivered.toLocaleString();
-        document.getElementById('efficiency').innerText = sumSent > 0 ? ((sumDelivered / sumSent) * 100).toFixed(1) + '%' : '0%';
-
-        // Si ya existe una gráfica, la destruimos para no encimar
-        if (myChart) {
-            myChart.destroy();
-        }
-
-        myChart = new Chart(document.getElementById('shippingChart'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Enviados', data: sentData, backgroundColor: '#3498db' },
-                    { label: 'Entregados', data: deliveredData, backgroundColor: '#2ecc71' }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-        });
-    }
-
-    // ARRANQUE DEL SISTEMA
-    iniciarSistema();
-</script>
-
-</body>
-</html>
+            document.getElementById('statusMessage').innerText = "Consultando base de datos...";
+            document.getElementById('statusMessage').style.display = '
