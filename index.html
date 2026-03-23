@@ -150,44 +150,80 @@
     }
 
     // ==========================================
-    // EXTRACCIÓN Y FILTRADO DE DATOS
+    // EXTRACCIÓN Y FILTRADO DE DATOS (CON PAGINACIÓN AUTOMÁTICA)
     // ==========================================
     async function cargarDatosSupabase() {
         try {
-            document.getElementById('statusMessage').innerText = "Consultando base de datos...";
+            document.getElementById('statusMessage').innerText = "Descargando toda la información de la base de datos...";
             document.getElementById('statusMessage').style.display = 'block';
             document.getElementById('dashboardContent').style.display = 'none';
 
-            const mesInicio = document.getElementById('mesInicio').value; 
+            // 1. Leemos qué fechas seleccionó el usuario
+            const mesInicio = document.getElementById('mesInicio').value; // Formato esperado: YYYY-MM
             const mesFin = document.getElementById('mesFin').value;
 
-            let consulta = clienteSupabase
-                .from('paquetes_enviados')
-                .select('fecha_envio, estatus_entrega')
-                .limit(10000);
+            // 2. EXTRAEMOS TODO EN LOTES (Para burlar el límite de 1000 de Supabase)
+            let todosLosPaquetes = [];
+            let rangoInicio = 0;
+            const tamañoPagina = 1000;
+            let buscando = true;
 
-            if (mesInicio) {
-                consulta = consulta.gte('fecha_envio', `${mesInicio}-01T00:00:00`);
+            while (buscando) {
+                let consulta = clienteSupabase
+                    .from('paquetes_enviados')
+                    .select('fecha_envio, estatus_entrega');
+
+                if (mesInicio) consulta = consulta.gte('fecha_envio', `${mesInicio}-01T00:00:00`);
+                if (mesFin) {
+                    const [anio, mes] = mesFin.split('-');
+                    const ultimoDia = new Date(anio, mes, 0).getDate(); 
+                    consulta = consulta.lte('fecha_envio', `${mesFin}-${ultimoDia}T23:59:59`);
+                }
+
+                // Pedimos el lote correspondiente (ej. 0 al 999, luego 1000 al 1999)
+                consulta = consulta.range(rangoInicio, rangoInicio + tamañoPagina - 1);
+
+                const { data, error } = await consulta;
+
+                if (error) throw error;
+
+                // Sumamos lo que llegó al total general
+                todosLosPaquetes.push(...data);
+
+                // Si nos mandaron menos de 1000, significa que ya no hay más datos escondidos
+                if (data.length < tamañoPagina) {
+                    buscando = false;
+                } else {
+                    rangoInicio += tamañoPagina; // Preparamos el siguiente viaje
+                }
             }
 
-            if (mesFin) {
-                const [anio, mes] = mesFin.split('-');
-                const ultimoDia = new Date(anio, mes, 0).getDate(); 
-                consulta = consulta.lte('fecha_envio', `${mesFin}-${ultimoDia}T23:59:59`);
-            }
-
-            const { data, error } = await consulta;
-
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
+            if (todosLosPaquetes.length === 0) {
                 showError("No se encontraron paquetes en este rango de fechas.");
                 return;
             }
 
             const agrupado = {};
 
-            data.forEach(paquete => {
+            // 3. Rellenamos meses vacíos con ceros por si acaso no hubo operación real en alguno
+            if (mesInicio && mesFin) {
+                let [anioAct, mesAct] = mesInicio.split('-').map(Number);
+                let [anioLimite, mesLimite] = mesFin.split('-').map(Number);
+
+                while (anioAct < anioLimite || (anioAct === anioLimite && mesAct <= mesLimite)) {
+                    let periodoVacio = `${anioAct}-${String(mesAct).padStart(2, '0')}`;
+                    agrupado[periodoVacio] = { Periodo: periodoVacio, Enviados: 0, Entregados: 0 };
+                    
+                    mesAct++;
+                    if (mesAct > 12) {
+                        mesAct = 1;
+                        anioAct++;
+                    }
+                }
+            }
+
+            // 4. Agrupamos los miles de datos reales que descargamos
+            todosLosPaquetes.forEach(paquete => {
                 if (!paquete.fecha_envio) return;
 
                 const fecha = new Date(paquete.fecha_envio);
