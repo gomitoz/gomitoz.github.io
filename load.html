@@ -160,9 +160,9 @@
                 // Mandamos los datos a Supabase
                 mostrarMensaje("Guardando en la base de datos... Por favor espera.", "info");
                 
-                const { data, error } = await clienteSupabase
+               const { data, error } = await clienteSupabase
                     .from('paquetes_enviados')
-                    .insert(datosLimpios);
+                    .upsert(datosLimpios, { onConflict: 'tracking_number' });
 
                 if (error) {
                     console.error(error);
