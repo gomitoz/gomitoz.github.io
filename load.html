@@ -103,18 +103,28 @@
     }
 
    // ==========================================
-    // PROCESAMIENTO DEL ARCHIVO (CON LOTES)
+    // PROCESAMIENTO DEL ARCHIVO (CON LOTES Y VALIDACIÓN)
     // ==========================================
     async function procesarArchivo() {
         const fileInput = document.getElementById('csvFile');
         const paqueteriaSeleccionada = document.getElementById('paqueteria').value;
         const btn = document.getElementById('btnSubir');
 
+        // 1. Validar que haya archivo
         if (!fileInput.files.length) {
             mostrarMensaje("Por favor, selecciona un archivo CSV primero.", "error");
             return;
         }
 
+        // 2. NUEVO: Alerta de confirmación (Poka-yoke)
+        const seguro = confirm(`¿Estás seguro que deseas cargar la información de ${paqueteriaSeleccionada}? \n\nRevisa que el archivo seleccionado corresponda a esta paquetería.`);
+        
+        // Si el usuario le da a "Cancelar", detenemos todo aquí mismo.
+        if (!seguro) {
+            return; 
+        }
+
+        // Si le da a "Aceptar", continuamos con el proceso...
         btn.disabled = true;
         mostrarMensaje("Leyendo archivo...", "info");
 
@@ -124,7 +134,7 @@
             complete: async function(results) {
                 const filas = results.data;
                 
-                // EL TRADUCTOR: Transformamos el CSV crudo al molde limpio
+                // EL TRADUCTOR
                 const datosLimpios = filas.map(fila => {
                     let dataMapeada = {
                         tracking_number: fila.tracking_number ? String(fila.tracking_number) : 'Sin Tracking',
@@ -145,8 +155,8 @@
                     return dataMapeada;
                 });
 
-                // --- NUEVA LÓGICA DE LOTES (CHUNKS) ---
-                const tamañoLote = 500; // Mandamos de 500 en 500
+                // LÓGICA DE LOTES (CHUNKS)
+                const tamañoLote = 500; 
                 let errores = 0;
 
                 mostrarMensaje(`Subiendo ${datosLimpios.length} registros en lotes de ${tamañoLote}...`, "info");
@@ -165,9 +175,9 @@
                 }
 
                 if (errores > 0) {
-                    mostrarMensaje(`Proceso terminado con ${errores} error(es) en algunos lotes. Revisa la consola (F12).`, "error");
+                    mostrarMensaje(`Proceso terminado con ${errores} error(es) en algunos lotes. Revisa la consola.`, "error");
                 } else {
-                    mostrarMensaje(`¡Éxito! Se subieron/actualizaron ${filas.length} paquetes correctamente.`, "success");
+                    mostrarMensaje(`¡Éxito! Se subieron/actualizaron ${filas.length} paquetes de ${paqueteriaSeleccionada} correctamente.`, "success");
                     fileInput.value = ""; 
                 }
                 btn.disabled = false;
