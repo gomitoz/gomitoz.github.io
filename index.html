@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Logístico: Envíos vs Entregas</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,7 +12,13 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1000px; margin: 0 auto; }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; }
+        
+        /* Cabecera con botón de salir */
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
+        h1 { color: #2c3e50; margin: 0; }
+        .btn-salir { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-salir:hover { background: #c0392b; }
+
         .card { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 30px; }
         .card-header { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
         .chart-container { position: relative; height: 400px; width: 100%; }
@@ -25,14 +32,7 @@
         .kpi-value.green { color: #27ae60; }
         .kpi-label { color: #7f8c8d; }
         
-        /* Estilo para mensajes de error/carga */
-        #statusMessage { 
-            text-align: center; 
-            padding: 20px; 
-            margin: 20px 0; 
-            border-radius: 8px; 
-            font-weight: bold;
-        }
+        #statusMessage { text-align: center; padding: 20px; margin: 20px 0; border-radius: 8px; font-weight: bold; }
         .status-loading { background-color: #e3f2fd; color: #0d47a1; }
         .status-error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
     </style>
@@ -40,14 +40,13 @@
 <body>
 
 <div class="container">
-    <h1>Dashboard Operativo</h1>
-    <div style="text-align: right; margin-bottom: 20px;">
-        <button onclick="cerrarSesion()" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            Cerrar Sesión
-        </button>
+    <div class="header-top">
+        <h1>Dashboard Operativo</h1>
+        <button class="btn-salir" onclick="cerrarSesion()">Cerrar Sesión</button>
     </div>
+
     <div id="statusMessage" class="status-loading">
-        Conectando con Google Sheets...
+        Verificando seguridad...
     </div>
 
     <div id="dashboardContent" style="display:none;">
@@ -91,94 +90,74 @@
 </div>
 
 <script>
-
-// ==========================================
-    // CONFIGURACIÓN Y SEGURIDAD DE SUPABASE
     // ==========================================
-    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; // La que encontraste en Data API
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU';
+    // 1. CONFIGURACIÓN (REEMPLAZA ESTAS 3 LÍNEAS)
+    // ==========================================
+    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; // Integration > Data API
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; // Integration > Data API
+    const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv'; 
+
+    // Inicializamos Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Función que verifica si el usuario tiene permiso de estar aquí
-    async function protegerRuta() {
+    // ==========================================
+    // 2. LÓGICA DE SEGURIDAD
+    // ==========================================
+    async function iniciarSistema() {
+        const statusDiv = document.getElementById('statusMessage');
+        
+        // Primero validamos que el usuario esté logueado
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Si no hay sesión activa, lo pateamos a la pantalla de login
         if (!session || error) {
+            // No tiene permiso, lo mandamos al login
             window.location.href = "login.html";
-        } else {
-            // Opcional: Mostrar el correo del usuario que entró
-            console.log("Usuario autenticado:", session.user.email);
+            return; // Detenemos la ejecución aquí
         }
-    }
-    
-    // Ejecutar el candado inmediatamente al cargar la página
-    protegerRuta();
 
-    // Función para cerrar sesión
+        // Si llegó hasta aquí, sí tiene permiso. Cambiamos el mensaje y cargamos datos.
+        statusDiv.innerText = "Conectando con Google Sheets...";
+        cargarDatosGoogleSheets();
+    }
+
     async function cerrarSesion() {
         await supabase.auth.signOut();
         window.location.href = "login.html";
     }
 
-    
     // ==========================================
-    // CONFIGURACIÓN: PEGA AQUÍ TU ENLACE
+    // 3. LÓGICA DE DATOS Y GRÁFICAS
     // ==========================================
-    const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv'; 
-
-    async function init() {
-        const statusDiv = document.getElementById('statusMessage');
-
-        // 1. Verificación básica del enlace
-        // AQUÍ EL CAMBIO: Comparamos contra el texto de relleno, NO contra tu enlace real.
-        if(GOOGLE_SHEET_CSV_URL === 'TU_ENLACE_CSV_AQUI' || GOOGLE_SHEET_CSV_URL.length < 10) {
-            showError("¡Falta el enlace! Edita el código HTML y pon tu URL de Google Sheets.");
+    async function cargarDatosGoogleSheets() {
+        if(GOOGLE_SHEET_CSV_URL === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv' || GOOGLE_SHEET_CSV_URL.length < 10) {
+            showError("¡Falta el enlace de Google Sheets!");
             return;
         }
 
         try {
-            // 2. Intentamos descargar con FETCH (más robusto)
             const response = await fetch(GOOGLE_SHEET_CSV_URL);
-
-            if (!response.ok) {
-                throw new Error(`Error de conexión (${response.status}): ${response.statusText}`);
-            }
-
-            // 3. Verificar si Google nos devolvió una web en lugar de datos
+            if (!response.ok) throw new Error(`Error de conexión (${response.status})`);
+            
             const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("text/html")) {
-                throw new Error("El enlace es incorrecto. Parece ser una página web, no un CSV. Asegúrate de usar el enlace de 'Publicar en la web' que termina en 'output=csv'.");
-            }
+            if (contentType && contentType.includes("text/html")) throw new Error("El enlace es incorrecto. Parece ser una página web, no un CSV.");
 
             const csvText = await response.text();
 
-            // 4. Procesar CSV
             Papa.parse(csvText, {
                 header: true,
                 skipEmptyLines: true,
                 dynamicTyping: true,
                 complete: function(results) {
-                    if (results.errors.length > 0) {
-                        console.warn("Advertencias del CSV:", results.errors);
-                    }
-                    
                     const data = results.data;
-                    // Validar que tenga las columnas correctas
                     if(data.length > 0 && (!data[0].hasOwnProperty('Periodo') || !data[0].hasOwnProperty('Enviados'))) {
-                        showError("El archivo no tiene las columnas correctas. Necesita: 'Periodo', 'Enviados', 'Entregados'.");
+                        showError("Columnas incorrectas en CSV.");
                         return;
                     }
-
                     renderDashboard(data);
                 },
-                error: function(err) {
-                    throw new Error("Fallo al leer la estructura del CSV: " + err.message);
-                }
+                error: function(err) { throw new Error(err.message); }
             });
-
         } catch (error) {
-            console.error(error);
             showError(error.message);
         }
     }
@@ -186,7 +165,7 @@
     function showError(msg) {
         const el = document.getElementById('statusMessage');
         el.className = 'status-error';
-        el.innerHTML = `<strong>Algo salió mal:</strong><br>${msg}<br><br><small>Verifica que el enlace sea 'Público en la web' y formato CSV.</small>`;
+        el.innerHTML = `<strong>Error:</strong><br>${msg}`;
     }
 
     function renderDashboard(rawData) {
@@ -198,8 +177,7 @@
         const labels = [], sentData = [], deliveredData = [];
 
         rawData.forEach(row => {
-            if(!row.Periodo) return; // Saltar filas vacías
-            
+            if(!row.Periodo) return;
             const env = Number(row.Enviados) || 0;
             const entr = Number(row.Entregados) || 0;
             const percent = env > 0 ? ((entr / env) * 100).toFixed(1) + '%' : '0%';
@@ -232,7 +210,8 @@
         });
     }
 
-    init();
+    // ARRANQUE DEL SISTEMA
+    iniciarSistema();
 </script>
 
 </body>
