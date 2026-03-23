@@ -93,12 +93,12 @@
     // ==========================================
     // 1. CONFIGURACIÓN (REEMPLAZA ESTAS 3 LÍNEAS)
     // ==========================================
-    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; // Integration > Data API
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; // Integration > Data API
+    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
     const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv'; 
 
-    // Inicializamos Supabase
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // SOLUCIÓN AQUÍ: Cambiamos el nombre de la variable a "clienteSupabase"
+    const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ==========================================
     // 2. LÓGICA DE SEGURIDAD
@@ -106,22 +106,21 @@
     async function iniciarSistema() {
         const statusDiv = document.getElementById('statusMessage');
         
-        // Primero validamos que el usuario esté logueado
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Usamos la nueva variable clienteSupabase
+        const { data: { session }, error } = await clienteSupabase.auth.getSession();
         
         if (!session || error) {
-            // No tiene permiso, lo mandamos al login
             window.location.href = "login.html";
-            return; // Detenemos la ejecución aquí
+            return; 
         }
 
-        // Si llegó hasta aquí, sí tiene permiso. Cambiamos el mensaje y cargamos datos.
         statusDiv.innerText = "Conectando con Google Sheets...";
         cargarDatosGoogleSheets();
     }
 
     async function cerrarSesion() {
-        await supabase.auth.signOut();
+        // Usamos la nueva variable clienteSupabase
+        await clienteSupabase.auth.signOut();
         window.location.href = "login.html";
     }
 
@@ -129,7 +128,7 @@
     // 3. LÓGICA DE DATOS Y GRÁFICAS
     // ==========================================
     async function cargarDatosGoogleSheets() {
-        if(GOOGLE_SHEET_CSV_URL === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPxprksL2stAcKezf8MMnsvRDtmuQechbO0GmWDYaq8MmRyPK-dSADJoCRsZfuW83UVykQttLptgPw/pub?gid=0&single=true&output=csv' || GOOGLE_SHEET_CSV_URL.length < 10) {
+        if(GOOGLE_SHEET_CSV_URL === 'TU_ENLACE_CSV_DE_GOOGLE_SHEETS_AQUI' || GOOGLE_SHEET_CSV_URL.length < 10) {
             showError("¡Falta el enlace de Google Sheets!");
             return;
         }
