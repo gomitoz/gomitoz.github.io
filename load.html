@@ -167,45 +167,53 @@
                 const filas = results.data;
                 
                 const datosLimpios = filas.map(fila => {
+                    // ==========================================
+                    // EL EXORCISMO SUPREMO DE BYTES NULOS
+                    // Convertimos toda la fila a texto, le disparamos a los fantasmas invisibles, 
+                    // y la volvemos a armar limpiecita antes de leerla.
+                    // ==========================================
+                    let filaStr = JSON.stringify(fila);
+                    filaStr = filaStr.replace(/[\u0000]/g, '').replace(/\\u0000/g, '');
+                    let filaSegura = JSON.parse(filaStr);
+
                     let dataMapeada = {
                         paqueteria: paqueteriaSeleccionada,
-                        detalles_extra: fila 
+                        detalles_extra: filaSegura // Ahora esto va 100% puro y seguro
                     };
 
                     // ==========================================
                     // TRADUCTOR FEDEX
                     // ==========================================
                     if (paqueteriaSeleccionada === 'FedEx') {
-                        dataMapeada.tracking_number = fila.tracking_number ? limpiarExcel(fila.tracking_number) : 'Sin Tracking';
-                        dataMapeada.fecha_envio = formatoFechaDB(fila.created_at);
-                        dataMapeada.fecha_entrega = formatoFechaDB(fila.delivered_at);
-                        dataMapeada.destinatario = limpiarExcel(fila.consignee_name);
-                        dataMapeada.ciudad = limpiarExcel(fila.consignee_city);
-                        let estadoAbrev = limpiarExcel(fila.consignee_state).toUpperCase();
+                        dataMapeada.tracking_number = filaSegura.tracking_number ? limpiarExcel(filaSegura.tracking_number) : 'Sin Tracking';
+                        dataMapeada.fecha_envio = formatoFechaDB(filaSegura.created_at);
+                        dataMapeada.fecha_entrega = formatoFechaDB(filaSegura.delivered_at);
+                        dataMapeada.destinatario = limpiarExcel(filaSegura.consignee_name);
+                        dataMapeada.ciudad = limpiarExcel(filaSegura.consignee_city);
+                        let estadoAbrev = limpiarExcel(filaSegura.consignee_state).toUpperCase();
                         dataMapeada.estado_destino = diccionarioEstados[estadoAbrev] || estadoAbrev; 
-                        dataMapeada.estatus_entrega = limpiarExcel(fila.status);
-                        dataMapeada.monto_cobrado = Number(limpiarExcel(fila.cash_on_delivery_amount)) || 0;
-                        dataMapeada.producto = limpiarExcel(fila.consignee_company_name) || 'No especificado';
+                        dataMapeada.estatus_entrega = limpiarExcel(filaSegura.status);
+                        dataMapeada.monto_cobrado = Number(limpiarExcel(filaSegura.cash_on_delivery_amount)) || 0;
+                        dataMapeada.producto = limpiarExcel(filaSegura.consignee_company_name) || 'No especificado';
                     }
 
                     // ==========================================
-                    // TRADUCTOR AFIMEX (NUEVO)
+                    // TRADUCTOR AFIMEX
                     // ==========================================
                     else if (paqueteriaSeleccionada === 'Afimex') {
-                        dataMapeada.tracking_number = fila['GUÍA'] ? limpiarExcel(fila['GUÍA']) : 'Sin Tracking';
+                        dataMapeada.tracking_number = filaSegura['GUÍA'] ? limpiarExcel(filaSegura['GUÍA']) : 'Sin Tracking';
                         
                         // Fechas
-                        dataMapeada.fecha_envio = formatoFechaDB(fila['FECHA DE DOCUMENTACIÓN']);
-                        dataMapeada.fecha_entrega = formatoFechaDB(fila['FECHA DE ENTREGA']);
+                        dataMapeada.fecha_envio = formatoFechaDB(filaSegura['FECHA DE DOCUMENTACIÓN']);
+                        dataMapeada.fecha_entrega = formatoFechaDB(filaSegura['FECHA DE ENTREGA']);
                         
                         // El "Cuchillo" para el Destinatario
-                        let destRaw = limpiarExcel(fila['DESTINATARIO']);
+                        let destRaw = limpiarExcel(filaSegura['DESTINATARIO']);
                         let partes = destRaw.split('/');
                         
                         if (partes.length >= 3) {
                             // Venta normal
                             dataMapeada.destinatario = partes[0].trim();
-                            // Quitamos letras, dejamos solo numeros y punto decimal
                             let codNumerico = partes[1].replace(/[^0-9.]/g, '');
                             dataMapeada.monto_cobrado = Number(codNumerico) || 0;
                             dataMapeada.producto = partes.slice(2).join('/').trim();
@@ -217,10 +225,10 @@
                         }
 
                         // Afimex usa "DESTINO" como ciudad/estado
-                        dataMapeada.ciudad = limpiarExcel(fila['DESTINO']);
-                        dataMapeada.estado_destino = limpiarExcel(fila['DESTINO']);
+                        dataMapeada.ciudad = limpiarExcel(filaSegura['DESTINO']);
+                        dataMapeada.estado_destino = limpiarExcel(filaSegura['DESTINO']);
                         
-                        dataMapeada.estatus_entrega = limpiarExcel(fila['ESTADO DE LA GUÍA']);
+                        dataMapeada.estatus_entrega = limpiarExcel(filaSegura['ESTADO DE LA GUÍA']);
                     }
 
                     return dataMapeada;
