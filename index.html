@@ -62,10 +62,10 @@
 
 <div class="container">
     <div class="header-top">
-        <h1>Centro de Mando Operativo</h1>
+        <h1>Dashboard Operativo</h1>
         <div class="botones-header">
             <a href="finanzas.html" class="btn-nav btn-finanzas">Ir a Finanzas</a>
-            <a href="carga.html" class="btn-nav">Cargar Datos</a>
+            <a href="load.html" class="btn-nav">Cargar + Datos</a>
             <button class="btn-nav btn-salir" onclick="cerrarSesion()">Salir</button>
         </div>
     </div>
@@ -85,7 +85,7 @@
 
         <div class="seccion-card">
             <div class="seccion-titulo">
-                Sección 1: Eficiencia de Envíos
+                Eficiencia de Envíos
                 <div class="filtro-bar" style="margin: 0; padding: 5px;">
                     Desde: <input type="month" id="s1Inicio"> 
                     Hasta: <input type="month" id="s1Fin">
@@ -114,7 +114,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Sección 2: Detalle Pedidos por Mes</div>
+            <div class="seccion-titulo">Detalle Pedidos por Mes</div>
             <div class="filtro-bar">
                 Mes específico: <input type="month" id="s2Mes">
                 <button class="btn-aplicar" onclick="renderSeccion2()">Consultar Mes</button>
@@ -133,7 +133,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Sección 3: Detalle Pedidos por Día</div>
+            <div class="seccion-titulo">Detalle Pedidos por Día</div>
             <div class="filtro-bar">
                 Rango de Días -> Desde: <input type="date" id="s3Inicio"> Hasta: <input type="date" id="s3Fin">
                 <button class="btn-aplicar" onclick="renderSeccion3()">Consultar Días</button>
@@ -152,7 +152,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Sección 4: Top Productos y Distribución Nacional</div>
+            <div class="seccion-titulo">Top Productos y Distribución Nacional</div>
             <div class="flex-row">
                 
                 <div class="w-50">
