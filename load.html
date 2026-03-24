@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carga de Archivos - Dashboard Operativo</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -15,6 +15,7 @@
         
         .form-group { margin-bottom: 20px; }
         label { display: block; font-weight: bold; margin-bottom: 8px; color: #34495e; }
+        /* Ahora aceptamos xlsx y xls también */
         select, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px; box-sizing: border-box; font-size: 1em; }
         
         .btn-cargar { width: 100%; padding: 15px; background-color: #3498db; color: white; border: none; border-radius: 5px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: background 0.3s; }
@@ -41,12 +42,12 @@
         <select id="paqueteria">
             <option value="FedEx">FedEx</option>
             <option value="Afimex">Afimex</option>
-            </select>
+        </select>
     </div>
 
     <div class="form-group">
-        <label for="csvFile">2. Selecciona el archivo CSV:</label>
-        <input type="file" id="csvFile" accept=".csv">
+        <label for="excelFile">2. Selecciona el archivo (.xlsx o .csv):</label>
+        <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
     </div>
 
     <button id="btnSubir" class="btn-cargar" onclick="procesarArchivo()">Procesar y Subir Datos</button>
@@ -62,10 +63,10 @@
 
 <script>
     // ==========================================
-    // CONFIGURACIÓN SUPABASE (¡PEGA TUS LLAVES AQUÍ!)
+    // CONFIGURACIÓN SUPABASE
     // ==========================================
     const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU';
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function verificarAcceso() {
@@ -101,45 +102,50 @@
         "YU": "Yucatán", "ZA": "Zacatecas"
     };
 
- function limpiarExcel(texto) {
-        if (!texto) return '';
-        // Quitamos signos raros de Excel (="), luego eliminamos los bytes nulos (\0) invisibles
-        return String(texto).replace(/[="]/g, '').replace(/\0/g, '').trim();
+    // Excel exporta fechas como números a veces, SheetJS nos ayuda pero aseguramos la limpieza
+    function limpiarExcel(texto) {
+        if (texto === undefined || texto === null) return '';
+        return String(texto).replace(/[="]/g, '').trim();
     }
 
+    // Lector de fechas híbrido (entiende el Excel numérico y el texto normal)
     function formatoFechaDB(fechaTexto) {
-        if (!fechaTexto || typeof fechaTexto !== 'string') return null;
+        if (!fechaTexto || String(fechaTexto).trim() === '') return null;
         
-        fechaTexto = limpiarExcel(fechaTexto).replace('T', ' ');
-        // Filtro especial para Afimex cuando no tienen el dato
-        if (fechaTexto === '' || fechaTexto.includes('NaN') || fechaTexto.toUpperCase().includes('SIN INFO')) return null;
+        let texto = String(fechaTexto).trim();
+        if (texto.toUpperCase().includes('SIN INFO') || texto.toUpperCase().includes('NAN')) return null;
 
-        if (fechaTexto.match(/^\d{4}-\d{2}-\d{2}/)) return fechaTexto; 
+        // Si SheetJS nos regresa la fecha ya en formato Excel numérico (ej: 45000)
+        if (!isNaN(texto) && Number(texto) > 10000) {
+            const date = new Date((Number(texto) - (25567 + 2)) * 86400 * 1000);
+            return date.toISOString().split('.')[0]; 
+        }
+
+        texto = texto.replace('T', ' ');
+        if (texto.match(/^\d{4}-\d{2}-\d{2}/)) return texto; 
         
-        const partes = fechaTexto.split(/[\s/:-]+/); 
+        const partes = texto.split(/[\s/:-]+/); 
         if (partes.length >= 3) {
             let dia = partes[0], mes = partes[1], anio = partes[2];
-            
             if (anio.length !== 4 && dia.length === 4) { anio = partes[0]; dia = partes[2]; }
-            if (isNaN(dia) || isNaN(mes) || isNaN(anio) || anio.includes('NaN')) return null;
+            if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return null;
 
             let hora = partes[3] || '00', minuto = partes[4] || '00', segundo = partes[5] || '00';
-
             return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}T${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}:${String(segundo).padStart(2, '0')}`;
         }
         return null;
     }
 
     // ==========================================
-    // PROCESAMIENTO DEL ARCHIVO 
+    // PROCESAMIENTO CON LECTOR DE EXCEL
     // ==========================================
     async function procesarArchivo() {
-        const fileInput = document.getElementById('csvFile');
+        const fileInput = document.getElementById('excelFile');
         const paqueteriaSeleccionada = document.getElementById('paqueteria').value;
         const btn = document.getElementById('btnSubir');
 
         if (!fileInput.files.length) {
-            mostrarMensaje("Por favor, selecciona un archivo CSV primero.", "error");
+            mostrarMensaje("Por favor, selecciona un archivo primero.", "error");
             return;
         }
 
@@ -147,98 +153,113 @@
         if (!seguro) return; 
 
         btn.disabled = true;
-        mostrarMensaje("Leyendo y limpiando archivo...", "info");
+        mostrarMensaje("Leyendo archivo de Excel...", "info");
 
-        Papa.parse(fileInput.files[0], {
-            header: true,
-            skipEmptyLines: true,
-            // ¡MAGIA!: Quitamos el título estorboso de Afimex en la fila 1 antes de leer
-            beforeFirstChunk: function(chunk) {
-                if (paqueteriaSeleccionada === 'Afimex') {
-                    let lineas = chunk.split('\n');
-                    if (lineas[0].toUpperCase().includes('INVENTARIO DE GUÍAS')) {
-                        lineas.shift(); // Borra la primera línea basura
-                    }
-                    return lineas.join('\n');
-                }
-                return chunk;
-            },
-            complete: async function(results) {
-                const filas = results.data;
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            try {
+                // 1. Leemos el archivo binario
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array', cellDates: true});
                 
-                const datosLimpios = filas.map(fila => {
-                    // ==========================================
-                    // EL EXORCISMO SUPREMO DE BYTES NULOS
-                    // Convertimos toda la fila a texto, le disparamos a los fantasmas invisibles, 
-                    // y la volvemos a armar limpiecita antes de leerla.
-                    // ==========================================
-                    let filaStr = JSON.stringify(fila);
-                    filaStr = filaStr.replace(/[\u0000]/g, '').replace(/\\u0000/g, '');
-                    let filaSegura = JSON.parse(filaStr);
+                // 2. Tomamos la primera pestaña del Excel
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // 3. Lo convertimos a una tabla (Arreglo de Arreglos)
+                const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                
+                if (rawData.length < 2) throw new Error("El archivo parece estar vacío.");
 
+                // 4. Lógica para esquivar la primera línea de Afimex
+                let startIndex = 0;
+                if (paqueteriaSeleccionada === 'Afimex' && String(rawData[0][0]).toUpperCase().includes('INVENTARIO DE GUÍAS')) {
+                    startIndex = 1; 
+                }
+
+                // 5. Extraemos encabezados y las filas reales
+                const headers = rawData[startIndex];
+                const rows = rawData.slice(startIndex + 1);
+
+                // 6. Convertimos a Arreglo de Objetos (lo que usábamos antes)
+                const filasBrutas = rows.map(rowArray => {
+                    let obj = {};
+                    headers.forEach((header, index) => {
+                        obj[header] = rowArray[index];
+                    });
+                    return obj;
+                });
+
+                // ==========================================
+                // FILTRO ANTI-FANTASMAS
+                // ==========================================
+                const filas = filasBrutas.filter(fila => {
+                    let guia = paqueteriaSeleccionada === 'Afimex' ? fila['GUÍA'] : fila.tracking_number;
+                    return guia && String(guia).trim() !== '';
+                });
+
+                if (filas.length === 0) throw new Error("No se encontraron guías válidas en este archivo.");
+
+                // ==========================================
+                // MAPEADO Y TRADUCTOR
+                // ==========================================
+                const datosLimpios = filas.map(fila => {
                     let dataMapeada = {
                         paqueteria: paqueteriaSeleccionada,
-                        detalles_extra: filaSegura // Ahora esto va 100% puro y seguro
+                        detalles_extra: fila 
                     };
 
-                    // ==========================================
-                    // TRADUCTOR FEDEX
-                    // ==========================================
+                    // ---- FEDEX ----
                     if (paqueteriaSeleccionada === 'FedEx') {
-                        dataMapeada.tracking_number = filaSegura.tracking_number ? limpiarExcel(filaSegura.tracking_number) : 'Sin Tracking';
-                        dataMapeada.fecha_envio = formatoFechaDB(filaSegura.created_at);
-                        dataMapeada.fecha_entrega = formatoFechaDB(filaSegura.delivered_at);
-                        dataMapeada.destinatario = limpiarExcel(filaSegura.consignee_name);
-                        dataMapeada.ciudad = limpiarExcel(filaSegura.consignee_city);
-                        let estadoAbrev = limpiarExcel(filaSegura.consignee_state).toUpperCase();
+                        dataMapeada.tracking_number = fila.tracking_number ? limpiarExcel(fila.tracking_number) : 'Sin Tracking';
+                        dataMapeada.fecha_envio = formatoFechaDB(fila.created_at);
+                        dataMapeada.fecha_entrega = formatoFechaDB(fila.delivered_at);
+                        dataMapeada.destinatario = limpiarExcel(fila.consignee_name);
+                        dataMapeada.ciudad = limpiarExcel(fila.consignee_city);
+                        let estadoAbrev = limpiarExcel(fila.consignee_state).toUpperCase();
                         dataMapeada.estado_destino = diccionarioEstados[estadoAbrev] || estadoAbrev; 
-                        dataMapeada.estatus_entrega = limpiarExcel(filaSegura.status);
-                        dataMapeada.monto_cobrado = Number(limpiarExcel(filaSegura.cash_on_delivery_amount)) || 0;
-                        dataMapeada.producto = limpiarExcel(filaSegura.consignee_company_name) || 'No especificado';
+                        dataMapeada.estatus_entrega = limpiarExcel(fila.status);
+                        dataMapeada.monto_cobrado = Number(limpiarExcel(fila.cash_on_delivery_amount)) || 0;
+                        dataMapeada.producto = limpiarExcel(fila.consignee_company_name) || 'No especificado';
                     }
 
-                    // ==========================================
-                    // TRADUCTOR AFIMEX
-                    // ==========================================
+                    // ---- AFIMEX ----
                     else if (paqueteriaSeleccionada === 'Afimex') {
-                        dataMapeada.tracking_number = filaSegura['GUÍA'] ? limpiarExcel(filaSegura['GUÍA']) : 'Sin Tracking';
+                        dataMapeada.tracking_number = fila['GUÍA'] ? limpiarExcel(fila['GUÍA']) : 'Sin Tracking';
                         
-                        // Fechas
-                        dataMapeada.fecha_envio = formatoFechaDB(filaSegura['FECHA DE DOCUMENTACIÓN']);
-                        dataMapeada.fecha_entrega = formatoFechaDB(filaSegura['FECHA DE ENTREGA']);
+                        dataMapeada.fecha_envio = formatoFechaDB(fila['FECHA DE DOCUMENTACIÓN']);
+                        dataMapeada.fecha_entrega = formatoFechaDB(fila['FECHA DE ENTREGA']);
                         
-                        // El "Cuchillo" para el Destinatario
-                        let destRaw = limpiarExcel(filaSegura['DESTINATARIO']);
+                        let destRaw = limpiarExcel(fila['DESTINATARIO']);
                         let partes = destRaw.split('/');
                         
                         if (partes.length >= 3) {
-                            // Venta normal
                             dataMapeada.destinatario = partes[0].trim();
                             let codNumerico = partes[1].replace(/[^0-9.]/g, '');
                             dataMapeada.monto_cobrado = Number(codNumerico) || 0;
                             dataMapeada.producto = partes.slice(2).join('/').trim();
                         } else {
-                            // Devolución
                             dataMapeada.destinatario = 'DEVOLUCIÓN';
                             dataMapeada.monto_cobrado = 0;
                             dataMapeada.producto = destRaw.trim() || 'No especificado';
                         }
 
-                        // Afimex usa "DESTINO" como ciudad/estado
-                        dataMapeada.ciudad = limpiarExcel(filaSegura['DESTINO']);
-                        dataMapeada.estado_destino = limpiarExcel(filaSegura['DESTINO']);
-                        
-                        dataMapeada.estatus_entrega = limpiarExcel(filaSegura['ESTADO DE LA GUÍA']);
+                        dataMapeada.ciudad = limpiarExcel(fila['DESTINO']);
+                        dataMapeada.estado_destino = limpiarExcel(fila['DESTINO']);
+                        dataMapeada.estatus_entrega = limpiarExcel(fila['ESTADO DE LA GUÍA']);
                     }
 
                     return dataMapeada;
                 });
 
-                // Upsert a Supabase
+                // ==========================================
+                // SUBIDA A SUPABASE (UPSERT)
+                // ==========================================
                 const tamañoLote = 500; 
                 let errores = 0;
 
-                mostrarMensaje(`Actualizando ${datosLimpios.length} registros en la base de datos...`, "info");
+                mostrarMensaje(`Subiendo ${datosLimpios.length} registros válidos a la nube...`, "info");
 
                 for (let i = 0; i < datosLimpios.length; i += tamañoLote) {
                     const lote = datosLimpios.slice(i, i + tamañoLote);
@@ -246,22 +267,25 @@
                         .from('paquetes_enviados')
                         .upsert(lote, { onConflict: 'tracking_number' });
 
-                    if (error) { console.error("Error en el lote", i, error); errores++; }
+                    if (error) { console.error("Error lote", i, error); errores++; }
                 }
 
                 if (errores > 0) {
-                    mostrarMensaje(`Proceso terminado con ${errores} error(es). Revisa la consola (F12).`, "error");
+                    mostrarMensaje(`Proceso terminado con ${errores} error(es). Revisa la consola.`, "error");
                 } else {
-                    mostrarMensaje(`¡Éxito! Se procesaron ${filas.length} guías de ${paqueteriaSeleccionada}.`, "success");
-                    fileInput.value = ""; 
+                    mostrarMensaje(`¡Éxito total! Se procesaron ${filas.length} guías de ${paqueteriaSeleccionada}.`, "success");
+                    document.getElementById('excelFile').value = ""; 
                 }
                 btn.disabled = false;
-            },
-            error: function(err) {
-                mostrarMensaje("Error leyendo el CSV: " + err.message, "error");
+
+            } catch (err) {
+                mostrarMensaje("Error en el archivo: " + err.message, "error");
                 btn.disabled = false;
             }
-        });
+        };
+
+        // Arrancamos la lectura del archivo binario
+        reader.readAsArrayBuffer(file);
     }
 </script>
 
