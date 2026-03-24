@@ -6,6 +6,7 @@
     <title>Finanzas: Detalles de Cobro FedEx</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -15,8 +16,10 @@
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
         h1 { color: #27ae60; margin: 0; }
         .botones-header { display: flex; gap: 10px; }
-        .btn-nav { padding: 8px 15px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .btn-nav { padding: 8px 15px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; font-size: 1em; }
         .btn-nav:hover { background: #1a252f; }
+        .btn-excel { background: #207144; } /* Verde estilo Excel */
+        .btn-excel:hover { background: #185c37; }
         
         /* Layout de 2 columnas */
         .dashboard-grid { display: flex; gap: 20px; flex-wrap: wrap; }
@@ -50,8 +53,9 @@
     <div class="header-top">
         <h1>Dashboard Financiero (COD FedEx)</h1>
         <div class="botones-header">
+            <button class="btn-nav btn-excel" onclick="descargarExcel()">📥 Descargar Excel</button>
             <a href="index.html" class="btn-nav">← Regresar a Operaciones</a>
-            <a href="load.html" class="btn-nav">Cargar más Datos</a>
+            <a href="carga.html" class="btn-nav">Cargar Datos</a>
         </div>
     </div>
 
@@ -68,7 +72,7 @@
                 <span id="labelDiasSemana" class="semana-label">Esperando selección...</span>
             </div>
 
-            <table>
+            <table id="tablaSemana">
                 <thead>
                     <tr>
                         <th>Día</th>
@@ -93,7 +97,7 @@
                 <span class="semana-label">Consultará del día 1 al fin de mes.</span>
             </div>
 
-            <table>
+            <table id="tablaMes">
                 <thead>
                     <tr>
                         <th>Mes</th>
@@ -114,21 +118,59 @@
 
 <script>
     // ==========================================
-    // 1. CONFIGURACIÓN SUPABASE
+    // 1. CONFIGURACIÓN SUPABASE (¡PEGA TUS LLAVES AQUÍ!)
     // ==========================================
     const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Formateador de moneda para México
     const formatoDinero = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 
     // ==========================================
-    // 2. LÓGICA DEL PANEL SEMANAL (IZQUIERDA)
+    // 2. LÓGICA DE EXPORTACIÓN A EXCEL (NUEVO)
+    // ==========================================
+    function tieneDatos(idBody) {
+        const tbody = document.getElementById(idBody);
+        if (!tbody || tbody.rows.length === 0) return false;
+        // Si tiene solo 1 fila y ocupa todo el ancho (colspan > 1), es el mensaje "Aplica el filtro"
+        if (tbody.rows.length === 1 && tbody.rows[0].cells[0].colSpan > 1) return false;
+        return true;
+    }
+
+    function descargarExcel() {
+        const semanaActiva = tieneDatos('tablaSemanaBody');
+        const mesActivo = tieneDatos('tablaMesBody');
+
+        if (!semanaActiva && !mesActivo) {
+            alert("No hay datos para descargar. Aplica al menos un filtro de Semana o Mes primero.");
+            return;
+        }
+
+        // Creamos el archivo de Excel vacío en memoria
+        const wb = XLSX.utils.book_new();
+
+        // Si la semana tiene datos, copiamos esa tabla a una pestaña
+        if (semanaActiva) {
+            const wsSemana = XLSX.utils.table_to_sheet(document.getElementById('tablaSemana'));
+            XLSX.utils.book_append_sheet(wb, wsSemana, "Detalle Semana");
+        }
+
+        // Si el mes tiene datos, copiamos esa tabla a otra pestaña
+        if (mesActivo) {
+            const wsMes = XLSX.utils.table_to_sheet(document.getElementById('tablaMes'));
+            XLSX.utils.book_append_sheet(wb, wsMes, "Detalle Mes");
+        }
+
+        // Generamos y descargamos el archivo
+        XLSX.writeFile(wb, "Reporte_Financiero_FedEx.xlsx");
+    }
+
+
+    // ==========================================
+    // 3. LÓGICA DEL PANEL SEMANAL (IZQUIERDA)
     // ==========================================
     let fechasSemanaGlobal = { inicio: null, fin: null };
 
-    // Función para calcular lunes y domingo a partir de "2025-W40"
     function calcularDiasSemana() {
         const weekVal = document.getElementById('filtroSemana').value;
         const label = document.getElementById('labelDiasSemana');
@@ -142,7 +184,6 @@
         const year = parseInt(parts[0]);
         const week = parseInt(parts[1]);
 
-        // Cálculo de la semana ISO (El lunes de esa semana)
         const simple = new Date(year, 0, 1 + (week - 1) * 7);
         const dow = simple.getDay();
         const ISOweekStart = simple;
@@ -153,11 +194,9 @@
         const domingo = new Date(ISOweekStart);
         domingo.setDate(lunes.getDate() + 6);
 
-        // Guardamos las fechas en formato Base de Datos para la consulta
         fechasSemanaGlobal.inicio = `${lunes.getFullYear()}-${String(lunes.getMonth()+1).padStart(2,'0')}-${String(lunes.getDate()).padStart(2,'0')}T00:00:00`;
         fechasSemanaGlobal.fin = `${domingo.getFullYear()}-${String(domingo.getMonth()+1).padStart(2,'0')}-${String(domingo.getDate()).padStart(2,'0')}T23:59:59`;
 
-        // Formateamos para el texto bonito en español
         const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
         label.innerText = `(${weekVal}) lunes, ${lunes.toLocaleDateString('es-MX', opciones)} – domingo, ${domingo.toLocaleDateString('es-MX', opciones)}`;
     }
@@ -176,13 +215,12 @@
 
         if (error) { alert("Error: " + error.message); return; }
 
-        // Filtramos solo los entregados y agrupamos
         const agrupado = {};
         data.forEach(p => {
             const estatus = (p.estatus_entrega || '').toLowerCase();
             if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
                 
-                const dia = p.fecha_entrega.split('T')[0]; // Extrae YYYY-MM-DD
+                const dia = p.fecha_entrega.split('T')[0]; 
                 const prod = p.producto || 'Desconocido';
                 const llave = `${dia}|${prod}`;
 
@@ -197,10 +235,10 @@
     }
 
     // ==========================================
-    // 3. LÓGICA DEL PANEL MENSUAL (DERECHA)
+    // 4. LÓGICA DEL PANEL MENSUAL (DERECHA)
     // ==========================================
     async function cargarDatosMes() {
-        const mesVal = document.getElementById('filtroMes').value; // Ej: 2026-03
+        const mesVal = document.getElementById('filtroMes').value; 
         if (!mesVal) {
             alert("Por favor selecciona un mes primero."); return;
         }
@@ -211,7 +249,6 @@
         const fechaInicio = `${mesVal}-01T00:00:00`;
         const fechaFin = `${mesVal}-${ultimoDia}T23:59:59`;
 
-        // Para meses muy pesados, usamos paginación automática (múltiples camiones)
         let todosLosPaquetes = [];
         let rango = 0;
         let buscando = true;
@@ -222,7 +259,7 @@
         while (buscando) {
             const { data, error } = await clienteSupabase
                 .from('paquetes_enviados')
-                .select('producto, monto_cobrado, estatus_entrega') // No ocupamos fecha exacta, todo es del mismo mes
+                .select('producto, monto_cobrado, estatus_entrega') 
                 .eq('paqueteria', 'FedEx')
                 .gte('fecha_entrega', fechaInicio)
                 .lte('fecha_entrega', fechaFin)
@@ -255,7 +292,7 @@
     }
 
     // ==========================================
-    // 4. DIBUJADO DE TABLAS (COMPARTIDO)
+    // 5. DIBUJADO DE TABLAS (COMPARTIDO)
     // ==========================================
     function dibujarTabla(datos, idBody, idFoot, tipoPrimerColumna) {
         const tbody = document.getElementById(idBody);
@@ -268,7 +305,6 @@
             return;
         }
 
-        // Ordenamos alfabéticamente por fecha/mes y luego por producto
         datos.sort((a, b) => a.dia.localeCompare(b.dia) || a.producto.localeCompare(b.producto));
 
         let granTotalCantidad = 0;
@@ -288,7 +324,6 @@
             tbody.appendChild(tr);
         });
 
-        // Agregamos la fila final de TFOOt
         tfoot.innerHTML = `
             <tr class="row-totales">
                 <td colspan="2" style="text-align: right;">TOTALES:</td>
