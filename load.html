@@ -101,9 +101,10 @@
         "YU": "Yucatán", "ZA": "Zacatecas"
     };
 
-    function limpiarExcel(texto) {
+ function limpiarExcel(texto) {
         if (!texto) return '';
-        return String(texto).replace(/[="]/g, '').trim();
+        // Quitamos signos raros de Excel (="), luego eliminamos los bytes nulos (\0) invisibles
+        return String(texto).replace(/[="]/g, '').replace(/\0/g, '').trim();
     }
 
     function formatoFechaDB(fechaTexto) {
