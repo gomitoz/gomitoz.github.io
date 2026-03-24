@@ -195,7 +195,7 @@
                         
                         dataMapeada.estatus_entrega = limpiarExcel(fila.status);
                         dataMapeada.monto_cobrado = Number(limpiarExcel(fila.cash_on_delivery_amount)) || 0;
-                        dataMapeada.producto = limpiarExcel(fila.products || fila.name) || 'No especificado';
+                        dataMapeada.producto = limpiarExcel(fila.consignee_company_name) || 'No especificado';
                     }
                     return dataMapeada;
                 });
