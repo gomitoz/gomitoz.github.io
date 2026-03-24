@@ -66,14 +66,12 @@
 <body>
 
 <div class="container">
-    <div class="header-top">
-        <h1>Dashboard Financiero de Cobranza (COD)</h1>
-        <div class="botones-header">
+    <div class="botones-header">
             <button class="btn-nav btn-excel" onclick="descargarExcel()">📥 Descargar Excel</button>
             <a href="index.html" class="btn-nav">← Regresar a Operaciones</a>
             <a href="carga.html" class="btn-nav">Cargar Datos</a>
+            <button class="btn-nav" style="background: #e74c3c;" onclick="cerrarSesion()">Salir</button>
         </div>
-    </div>
 
     <div class="filtro-global">
         <strong style="color: #2c3e50; font-size: 1.1em;">Vista de Paquetería:</strong>
@@ -136,6 +134,22 @@
     const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU';  
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ==========================================
+    // SEGURIDAD: VERIFICACIÓN DE SESIÓN ACTIVA
+    // ==========================================
+    async function verificarAcceso() {
+        const { data: { session }, error } = await clienteSupabase.auth.getSession();
+        if (!session || error) {
+            window.location.href = "login.html"; // Si no hay sesión, lo patea al login
+        }
+    }
+    verificarAcceso(); // Ejecutar inmediatamente al abrir la página
+
+    async function cerrarSesion() {
+        await clienteSupabase.auth.signOut();
+        window.location.href = "login.html";
+    }
 
     const formatoDinero = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 
