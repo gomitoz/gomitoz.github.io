@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanzas: Detalles de Cobro FedEx</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* Cabecera */
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
+        h1 { color: #27ae60; margin: 0; }
+        .botones-header { display: flex; gap: 10px; }
+        .btn-nav { padding: 8px 15px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .btn-nav:hover { background: #1a252f; }
+        
+        /* Layout de 2 columnas */
+        .dashboard-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+        .panel { flex: 1; min-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }
+        
+        .panel-header { font-size: 1.3em; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; color: #2c3e50; }
+        
+        /* Filtros */
+        .filtro-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6; }
+        .filtro-box input { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit; margin-right: 10px; }
+        .btn-filtro { padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-filtro:hover { background: #2980b9; }
+        .semana-label { display: block; margin-top: 10px; font-size: 0.9em; color: #7f8c8d; font-style: italic; }
+
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95em; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        /* Fila de Totales */
+        .row-totales { font-weight: bold; background-color: #e8f8f5 !important; color: #117a65; border-top: 2px solid #117a65; }
+        .monto-dinero { color: #27ae60; font-weight: bold; }
+        
+        #statusMessage { text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; background-color: #e3f2fd; color: #0d47a1; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-top">
+        <h1>Dashboard Financiero (COD FedEx)</h1>
+        <div class="botones-header">
+            <a href="index.html" class="btn-nav">← Regresar a Operaciones</a>
+            <a href="carga.html" class="btn-nav">Cargar Datos</a>
+        </div>
+    </div>
+
+    <div id="statusMessage" style="display:none;">Cargando...</div>
+
+    <div class="dashboard-grid">
+        
+        <div class="panel">
+            <div class="panel-header">Detalle por Semana</div>
+            <div class="filtro-box">
+                <label><strong>Selecciona la Semana:</strong></label><br><br>
+                <input type="week" id="filtroSemana" onchange="calcularDiasSemana()">
+                <button class="btn-filtro" onclick="cargarDatosSemana()">Consultar Semana</button>
+                <span id="labelDiasSemana" class="semana-label">Esperando selección...</span>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Día</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Total Venta (COD)</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaSemanaBody">
+                    <tr><td colspan="4">Aplica el filtro para ver datos</td></tr>
+                </tbody>
+                <tfoot id="tablaSemanaFoot"></tfoot>
+            </table>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Detalle por Mes</div>
+            <div class="filtro-box">
+                <label><strong>Selecciona el Mes:</strong></label><br><br>
+                <input type="month" id="filtroMes">
+                <button class="btn-filtro" onclick="cargarDatosMes()">Consultar Mes</button>
+                <span class="semana-label">Consultará del día 1 al fin de mes.</span>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Total Venta (COD)</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaMesBody">
+                    <tr><td colspan="4">Aplica el filtro para ver datos</td></tr>
+                </tbody>
+                <tfoot id="tablaMesFoot"></tfoot>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. CONFIGURACIÓN SUPABASE
+    // ==========================================
+    const SUPABASE_URL = 'https://vtjosswxbkuklwfygvcn.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
+    const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Formateador de moneda para México
+    const formatoDinero = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+
+    // ==========================================
+    // 2. LÓGICA DEL PANEL SEMANAL (IZQUIERDA)
+    // ==========================================
+    let fechasSemanaGlobal = { inicio: null, fin: null };
+
+    // Función para calcular lunes y domingo a partir de "2025-W40"
+    function calcularDiasSemana() {
+        const weekVal = document.getElementById('filtroSemana').value;
+        const label = document.getElementById('labelDiasSemana');
+        
+        if (!weekVal) {
+            label.innerText = "Esperando selección...";
+            return;
+        }
+
+        const parts = weekVal.split('-W');
+        const year = parseInt(parts[0]);
+        const week = parseInt(parts[1]);
+
+        // Cálculo de la semana ISO (El lunes de esa semana)
+        const simple = new Date(year, 0, 1 + (week - 1) * 7);
+        const dow = simple.getDay();
+        const ISOweekStart = simple;
+        if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+        else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+
+        const lunes = new Date(ISOweekStart);
+        const domingo = new Date(ISOweekStart);
+        domingo.setDate(lunes.getDate() + 6);
+
+        // Guardamos las fechas en formato Base de Datos para la consulta
+        fechasSemanaGlobal.inicio = `${lunes.getFullYear()}-${String(lunes.getMonth()+1).padStart(2,'0')}-${String(lunes.getDate()).padStart(2,'0')}T00:00:00`;
+        fechasSemanaGlobal.fin = `${domingo.getFullYear()}-${String(domingo.getMonth()+1).padStart(2,'0')}-${String(domingo.getDate()).padStart(2,'0')}T23:59:59`;
+
+        // Formateamos para el texto bonito en español
+        const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+        label.innerText = `(${weekVal}) lunes, ${lunes.toLocaleDateString('es-MX', opciones)} – domingo, ${domingo.toLocaleDateString('es-MX', opciones)}`;
+    }
+
+    async function cargarDatosSemana() {
+        if (!fechasSemanaGlobal.inicio) {
+            alert("Por favor selecciona una semana primero."); return;
+        }
+
+        const { data, error } = await clienteSupabase
+            .from('paquetes_enviados')
+            .select('fecha_entrega, producto, monto_cobrado, estatus_entrega')
+            .eq('paqueteria', 'FedEx')
+            .gte('fecha_entrega', fechasSemanaGlobal.inicio)
+            .lte('fecha_entrega', fechasSemanaGlobal.fin);
+
+        if (error) { alert("Error: " + error.message); return; }
+
+        // Filtramos solo los entregados y agrupamos
+        const agrupado = {};
+        data.forEach(p => {
+            const estatus = (p.estatus_entrega || '').toLowerCase();
+            if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
+                
+                const dia = p.fecha_entrega.split('T')[0]; // Extrae YYYY-MM-DD
+                const prod = p.producto || 'Desconocido';
+                const llave = `${dia}|${prod}`;
+
+                if (!agrupado[llave]) agrupado[llave] = { dia: dia, producto: prod, cantidad: 0, total: 0 };
+                
+                agrupado[llave].cantidad++;
+                agrupado[llave].total += Number(p.monto_cobrado) || 0;
+            }
+        });
+
+        dibujarTabla(Object.values(agrupado), 'tablaSemanaBody', 'tablaSemanaFoot', 'dia');
+    }
+
+    // ==========================================
+    // 3. LÓGICA DEL PANEL MENSUAL (DERECHA)
+    // ==========================================
+    async function cargarDatosMes() {
+        const mesVal = document.getElementById('filtroMes').value; // Ej: 2026-03
+        if (!mesVal) {
+            alert("Por favor selecciona un mes primero."); return;
+        }
+
+        const [anio, mes] = mesVal.split('-');
+        const ultimoDia = new Date(anio, mes, 0).getDate(); 
+        
+        const fechaInicio = `${mesVal}-01T00:00:00`;
+        const fechaFin = `${mesVal}-${ultimoDia}T23:59:59`;
+
+        // Para meses muy pesados, usamos paginación automática (múltiples camiones)
+        let todosLosPaquetes = [];
+        let rango = 0;
+        let buscando = true;
+
+        document.getElementById('statusMessage').style.display = 'block';
+        document.getElementById('statusMessage').innerText = 'Consultando mes...';
+
+        while (buscando) {
+            const { data, error } = await clienteSupabase
+                .from('paquetes_enviados')
+                .select('producto, monto_cobrado, estatus_entrega') // No ocupamos fecha exacta, todo es del mismo mes
+                .eq('paqueteria', 'FedEx')
+                .gte('fecha_entrega', fechaInicio)
+                .lte('fecha_entrega', fechaFin)
+                .range(rango, rango + 999);
+
+            if (error) { alert("Error: " + error.message); break; }
+            todosLosPaquetes.push(...data);
+            if (data.length < 1000) buscando = false;
+            else rango += 1000;
+        }
+
+        document.getElementById('statusMessage').style.display = 'none';
+
+        const agrupado = {};
+        todosLosPaquetes.forEach(p => {
+            const estatus = (p.estatus_entrega || '').toLowerCase();
+            if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
+                
+                const prod = p.producto || 'Desconocido';
+                const llave = `${mesVal}|${prod}`;
+
+                if (!agrupado[llave]) agrupado[llave] = { dia: mesVal, producto: prod, cantidad: 0, total: 0 };
+                
+                agrupado[llave].cantidad++;
+                agrupado[llave].total += Number(p.monto_cobrado) || 0;
+            }
+        });
+
+        dibujarTabla(Object.values(agrupado), 'tablaMesBody', 'tablaMesFoot', 'mes');
+    }
+
+    // ==========================================
+    // 4. DIBUJADO DE TABLAS (COMPARTIDO)
+    // ==========================================
+    function dibujarTabla(datos, idBody, idFoot, tipoPrimerColumna) {
+        const tbody = document.getElementById(idBody);
+        const tfoot = document.getElementById(idFoot);
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        if (datos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4">No hay ventas registradas o entregadas en este periodo.</td></tr>`;
+            return;
+        }
+
+        // Ordenamos alfabéticamente por fecha/mes y luego por producto
+        datos.sort((a, b) => a.dia.localeCompare(b.dia) || a.producto.localeCompare(b.producto));
+
+        let granTotalCantidad = 0;
+        let granTotalDinero = 0;
+
+        datos.forEach(row => {
+            granTotalCantidad += row.cantidad;
+            granTotalDinero += row.total;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.dia}</td>
+                <td>${row.producto}</td>
+                <td>${row.cantidad}</td>
+                <td class="monto-dinero">${formatoDinero.format(row.total)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Agregamos la fila final de TFOOt
+        tfoot.innerHTML = `
+            <tr class="row-totales">
+                <td colspan="2" style="text-align: right;">TOTALES:</td>
+                <td>${granTotalCantidad}</td>
+                <td>${formatoDinero.format(granTotalDinero)}</td>
+            </tr>
+        `;
+    }
+</script>
+
+</body>
+</html>
