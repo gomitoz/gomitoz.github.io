@@ -62,10 +62,10 @@
 
 <div class="container">
     <div class="header-top">
-        <h1>Dashboard Operativo</h1>
+        <h1>Centro de Mando Operativo</h1>
         <div class="botones-header">
             <a href="finanzas.html" class="btn-nav btn-finanzas">Ir a Finanzas</a>
-            <a href="load.html" class="btn-nav">Cargar + Datos</a>
+            <a href="carga.html" class="btn-nav">Cargar Datos</a>
             <button class="btn-nav btn-salir" onclick="cerrarSesion()">Salir</button>
         </div>
     </div>
@@ -85,7 +85,7 @@
 
         <div class="seccion-card">
             <div class="seccion-titulo">
-                Eficiencia de Envíos
+                Sección 1: Eficiencia de Envíos
                 <div class="filtro-bar" style="margin: 0; padding: 5px;">
                     Desde: <input type="month" id="s1Inicio"> 
                     Hasta: <input type="month" id="s1Fin">
@@ -114,7 +114,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Detalle Pedidos por Mes</div>
+            <div class="seccion-titulo">Sección 2: Detalle Pedidos por Mes</div>
             <div class="filtro-bar">
                 Mes específico: <input type="month" id="s2Mes">
                 <button class="btn-aplicar" onclick="renderSeccion2()">Consultar Mes</button>
@@ -133,7 +133,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Detalle Pedidos por Día</div>
+            <div class="seccion-titulo">Sección 3: Detalle Pedidos por Día</div>
             <div class="filtro-bar">
                 Rango de Días -> Desde: <input type="date" id="s3Inicio"> Hasta: <input type="date" id="s3Fin">
                 <button class="btn-aplicar" onclick="renderSeccion3()">Consultar Días</button>
@@ -152,7 +152,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Top Productos y Distribución Nacional</div>
+            <div class="seccion-titulo">Sección 4: Top Productos y Distribución Nacional</div>
             <div class="flex-row">
                 
                 <div class="w-50">
@@ -193,8 +193,8 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let paquetesGlobales = []; // Aquí vive la base de datos cruda
-    let paquetesFiltrados = []; // Aquí vive lo que el selector global permite ver
+    let paquetesGlobales = []; 
+    let paquetesFiltrados = []; 
     let graficas = { s1: null, s2: null, s3: null };
 
     // ==========================================
@@ -218,9 +218,10 @@
             let buscando = true;
 
             while (buscando) {
+                // ¡IMPORTANTE! Agregamos destinatario para poder detectar las devoluciones
                 const { data, error } = await clienteSupabase
                     .from('paquetes_enviados')
-                    .select('fecha_envio, estatus_entrega, producto, estado_destino, paqueteria') // Añadimos paqueteria aquí
+                    .select('fecha_envio, estatus_entrega, producto, estado_destino, paqueteria, destinatario') 
                     .range(rangoInicio, rangoInicio + tamañoPagina - 1);
 
                 if (error) throw error;
@@ -233,7 +234,6 @@
             document.getElementById('pantallaCarga').style.display = 'none';
             document.getElementById('dashboardContent').style.display = 'block';
             
-            // Disparamos el filtro global por primera vez para que dibuje todo
             aplicarFiltroGlobal();
 
         } catch (error) {
@@ -242,18 +242,29 @@
     }
 
     // ==========================================
-    // LÓGICA DEL FILTRO GLOBAL
+    // LÓGICA DEL FILTRO GLOBAL (PAQUETERÍA + PURIFICADOR DE DEVOLUCIONES)
     // ==========================================
     function aplicarFiltroGlobal() {
         const paqSeleccionada = document.getElementById('filtroPaqueteriaGlobal').value;
         
-        if (paqSeleccionada === 'Todas') {
-            paquetesFiltrados = paquetesGlobales;
-        } else {
-            paquetesFiltrados = paquetesGlobales.filter(p => p.paqueteria === paqSeleccionada);
+        // 1. Filtrar por paquetería si es necesario
+        let temporal = paquetesGlobales;
+        if (paqSeleccionada !== 'Todas') {
+            temporal = paquetesGlobales.filter(p => p.paqueteria === paqSeleccionada);
         }
 
-        // Redibujamos todas las secciones con la nueva data
+        // 2. ELIMINAR DEVOLUCIONES (Aplica para todas las secciones)
+        paquetesFiltrados = temporal.filter(p => {
+            // Si en la carga se marcó el destinatario como DEVOLUCIÓN, lo ignoramos
+            if (p.destinatario === 'DEVOLUCIÓN') return false;
+            
+            // Si el producto dice exactamente "SARTEN FLAVOR" (por si acaso), lo ignoramos
+            if (p.producto && p.producto.toUpperCase().trim() === 'SARTEN FLAVOR') return false;
+            
+            return true;
+        });
+
+        // Redibujamos todo con la data ya purificada
         renderSeccion1();
         renderSeccion2();
         renderSeccion3();
@@ -295,7 +306,8 @@
             agrupado[periodo].Enviados++;
             
             const estatus = (p.estatus_entrega || '').toLowerCase();
-            if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('success')) {
+            // ¡NUEVO!: Añadimos "entregada" para reconocer el estatus de Afimex
+            if (estatus.includes('delivered') || estatus.includes('entregado') || estatus.includes('entregada') || estatus.includes('success')) {
                 agrupado[periodo].Entregados++;
             }
         });
