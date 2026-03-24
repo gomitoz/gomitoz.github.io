@@ -21,6 +21,10 @@
         .btn-salir { background: #e74c3c; } .btn-salir:hover { background: #c0392b; }
         .btn-finanzas { background: #27ae60; } .btn-finanzas:hover { background: #1e8449; }
 
+        /* Filtro Global Maestro */
+        .filtro-global { background: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; border-left: 5px solid #f39c12; }
+        .filtro-global select { padding: 8px 15px; border-radius: 5px; border: 1px solid #bdc3c7; font-weight: bold; font-size: 1.05em; color: #2c3e50; cursor: pointer; outline: none; }
+        
         /* Tarjetas de Sección */
         .seccion-card { background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); padding: 25px; margin-bottom: 35px; border-top: 4px solid #2c3e50; }
         .seccion-titulo { font-size: 1.4em; font-weight: bold; color: #2c3e50; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -32,7 +36,7 @@
         .w-40 { flex: 4; min-width: 300px; }
         .chart-container { position: relative; height: 350px; width: 100%; }
         
-        /* Filtros */
+        /* Filtros Internos */
         .filtro-bar { background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; font-size: 0.9em; }
         .filtro-bar input { padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
         .btn-aplicar { background: #2c3e50; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -58,21 +62,30 @@
 
 <div class="container">
     <div class="header-top">
-        <h1>Dashboard Operativo</h1>
+        <h1>Centro de Mando Operativo</h1>
         <div class="botones-header">
             <a href="finanzas.html" class="btn-nav btn-finanzas">Ir a Finanzas</a>
-            <a href="load.html" class="btn-nav">Cargar + Datos</a>
+            <a href="carga.html" class="btn-nav">Cargar Datos</a>
             <button class="btn-nav btn-salir" onclick="cerrarSesion()">Salir</button>
         </div>
     </div>
 
-    <div id="pantallaCarga">Cargando información... ⏳</div>
+    <div id="pantallaCarga">Conectando a Supabase y descargando historial... ⏳</div>
 
     <div id="dashboardContent" style="display:none;">
         
+        <div class="filtro-global">
+            <strong style="color: #2c3e50; font-size: 1.1em;">Vista de Datos:</strong>
+            <select id="filtroPaqueteriaGlobal" onchange="aplicarFiltroGlobal()">
+                <option value="Todas">📦 Todas las Paqueterías (Consolidado)</option>
+                <option value="FedEx">🟣 Solo FedEx</option>
+                <option value="Afimex">🔴 Solo Afimex</option>
+            </select>
+        </div>
+
         <div class="seccion-card">
             <div class="seccion-titulo">
-                Eficiencia de Envíos
+                Sección 1: Eficiencia de Envíos
                 <div class="filtro-bar" style="margin: 0; padding: 5px;">
                     Desde: <input type="month" id="s1Inicio"> 
                     Hasta: <input type="month" id="s1Fin">
@@ -101,11 +114,10 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Detalle Pedidos por Mes</div>
+            <div class="seccion-titulo">Sección 2: Detalle Pedidos por Mes</div>
             <div class="filtro-bar">
                 Mes específico: <input type="month" id="s2Mes">
                 <button class="btn-aplicar" onclick="renderSeccion2()">Consultar Mes</button>
-                <span style="color:#7f8c8d; font-size:0.85em;">(Muestra total de pedidos generados)</span>
             </div>
             <div class="flex-row">
                 <div class="w-40">
@@ -121,7 +133,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Detalle Pedidos por Día</div>
+            <div class="seccion-titulo">Sección 3: Detalle Pedidos por Día</div>
             <div class="filtro-bar">
                 Rango de Días -> Desde: <input type="date" id="s3Inicio"> Hasta: <input type="date" id="s3Fin">
                 <button class="btn-aplicar" onclick="renderSeccion3()">Consultar Días</button>
@@ -140,7 +152,7 @@
         </div>
 
         <div class="seccion-card">
-            <div class="seccion-titulo">Top 10 Productos y Distribución Nacional</div>
+            <div class="seccion-titulo">Sección 4: Top Productos y Distribución Nacional</div>
             <div class="flex-row">
                 
                 <div class="w-50">
@@ -181,7 +193,8 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0am9zc3d4Ymt1a2x3ZnlndmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODI4MTgsImV4cCI6MjA4OTg1ODgxOH0.K0gzcDf7figLjgQ3bWO2hgGS9K8yrb1_qxquGypUzOU'; 
     const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let paquetesGlobales = []; // Aquí vivirá toda tu base de datos en la memoria
+    let paquetesGlobales = []; // Aquí vive la base de datos cruda
+    let paquetesFiltrados = []; // Aquí vive lo que el selector global permite ver
     let graficas = { s1: null, s2: null, s3: null };
 
     // ==========================================
@@ -207,7 +220,7 @@
             while (buscando) {
                 const { data, error } = await clienteSupabase
                     .from('paquetes_enviados')
-                    .select('fecha_envio, estatus_entrega, producto, estado_destino')
+                    .select('fecha_envio, estatus_entrega, producto, estado_destino, paqueteria') // Añadimos paqueteria aquí
                     .range(rangoInicio, rangoInicio + tamañoPagina - 1);
 
                 if (error) throw error;
@@ -217,15 +230,11 @@
                 else rangoInicio += tamañoPagina;
             }
 
-            // Una vez descargado todo, ocultamos el mensaje y pintamos todas las secciones
             document.getElementById('pantallaCarga').style.display = 'none';
             document.getElementById('dashboardContent').style.display = 'block';
             
-            renderSeccion1();
-            renderSeccion2();
-            renderSeccion3();
-            renderSeccion4Izq(); // El Top 10 histórico
-            renderSeccion4Der(); // El de Estados
+            // Disparamos el filtro global por primera vez para que dibuje todo
+            aplicarFiltroGlobal();
 
         } catch (error) {
             document.getElementById('pantallaCarga').innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
@@ -233,7 +242,27 @@
     }
 
     // ==========================================
-    // SECCIÓN 1: EFICIENCIA (Copia de tu lógica original mejorada)
+    // LÓGICA DEL FILTRO GLOBAL
+    // ==========================================
+    function aplicarFiltroGlobal() {
+        const paqSeleccionada = document.getElementById('filtroPaqueteriaGlobal').value;
+        
+        if (paqSeleccionada === 'Todas') {
+            paquetesFiltrados = paquetesGlobales;
+        } else {
+            paquetesFiltrados = paquetesGlobales.filter(p => p.paqueteria === paqSeleccionada);
+        }
+
+        // Redibujamos todas las secciones con la nueva data
+        renderSeccion1();
+        renderSeccion2();
+        renderSeccion3();
+        renderSeccion4Izq(); 
+        renderSeccion4Der(); 
+    }
+
+    // ==========================================
+    // SECCIÓN 1: EFICIENCIA 
     // ==========================================
     function limpiarS1() {
         document.getElementById('s1Inicio').value = ''; document.getElementById('s1Fin').value = '';
@@ -245,7 +274,6 @@
         const mFin = document.getElementById('s1Fin').value;
         const agrupado = {};
 
-        // Rellenar ceros si hay filtro
         if (mIni && mFin) {
             let [aAct, mAct] = mIni.split('-').map(Number);
             let [aLim, mLim] = mFin.split('-').map(Number);
@@ -256,11 +284,10 @@
             }
         }
 
-        paquetesGlobales.forEach(p => {
+        paquetesFiltrados.forEach(p => {
             if (!p.fecha_envio) return;
-            const periodo = p.fecha_envio.substring(0, 7); // Saca YYYY-MM directo del texto
+            const periodo = p.fecha_envio.substring(0, 7); 
             
-            // Validar filtro
             if (mIni && periodo < mIni) return;
             if (mFin && periodo > mFin) return;
 
@@ -275,7 +302,6 @@
 
         const dataFinal = Object.values(agrupado).sort((a, b) => a.Periodo.localeCompare(b.Periodo));
         
-        // Render Tabla y KPIs
         let tEnv = 0, tEnt = 0;
         const tbody = document.getElementById('tablaS1'); tbody.innerHTML = '';
         const labels = [], dEnv = [], dEnt = [];
@@ -300,16 +326,16 @@
     }
 
     // ==========================================
-    // SECCIÓN 2: PEDIDOS POR MES (Solo Total Generado)
+    // SECCIÓN 2: PEDIDOS POR MES 
     // ==========================================
     function renderSeccion2() {
         const mesFiltro = document.getElementById('s2Mes').value;
         const agrupado = {};
 
-        paquetesGlobales.forEach(p => {
+        paquetesFiltrados.forEach(p => {
             if (!p.fecha_envio) return;
             const periodo = p.fecha_envio.substring(0, 7); 
-            if (mesFiltro && periodo !== mesFiltro) return; // Si hay filtro, solo cuenta ese mes
+            if (mesFiltro && periodo !== mesFiltro) return; 
 
             agrupado[periodo] = (agrupado[periodo] || 0) + 1;
         });
@@ -335,16 +361,16 @@
     }
 
     // ==========================================
-    // SECCIÓN 3: PEDIDOS POR DÍA (Rango de Fechas)
+    // SECCIÓN 3: PEDIDOS POR DÍA 
     // ==========================================
     function renderSeccion3() {
         const dIni = document.getElementById('s3Inicio').value;
         const dFin = document.getElementById('s3Fin').value;
         const agrupado = {};
 
-        paquetesGlobales.forEach(p => {
+        paquetesFiltrados.forEach(p => {
             if (!p.fecha_envio) return;
-            const diaStr = p.fecha_envio.substring(0, 10); // Saca YYYY-MM-DD
+            const diaStr = p.fecha_envio.substring(0, 10); 
             
             if (dIni && diaStr < dIni) return;
             if (dFin && diaStr > dFin) return;
@@ -366,7 +392,7 @@
 
         if (graficas.s3) graficas.s3.destroy();
         graficas.s3 = new Chart(document.getElementById('chartS3'), {
-            type: 'line', // Línea se ve mejor para tendencias de días
+            type: 'line', 
             data: { labels: labels, datasets: [{ label: 'Pedidos por Día', data: dataArr, borderColor: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.2)', fill: true, tension: 0.3 }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
@@ -377,18 +403,11 @@
     // ==========================================
     function renderSeccion4Izq() {
         const agrupado = {};
-        paquetesGlobales.forEach(p => {
+        paquetesFiltrados.forEach(p => {
             let prod = p.producto && p.producto !== 'No especificado' ? p.producto : 'Otro / Sin Nombre';
-            
-            // PARCHE: Si el producto dice "fedex", lo mandamos a "Otro" para no ensuciar el Top 10
-            if (prod.toLowerCase() === 'fedex') {
-                prod = 'Otro / Sin Nombre';
-            }
-
             agrupado[prod] = (agrupado[prod] || 0) + 1;
         });
 
-        // Convertir a arreglo, ordenar mayor a menor, y cortar los primeros 10
         const top10 = Object.keys(agrupado)
             .map(k => ({ prod: k, cant: agrupado[k] }))
             .sort((a, b) => b.cant - a.cant)
@@ -404,34 +423,27 @@
         const mesFiltro = document.getElementById('s4Mes').value;
         const agrupado = {};
 
-        paquetesGlobales.forEach(p => {
+        paquetesFiltrados.forEach(p => {
             if (!p.fecha_envio) return;
             const periodo = p.fecha_envio.substring(0, 7); 
             if (mesFiltro && periodo !== mesFiltro) return; 
 
             let prod = p.producto && p.producto !== 'No especificado' ? p.producto : 'Otro / Sin Nombre';
-            
-            // PARCHE: Limpieza de datos antiguos
-            if (prod.toLowerCase() === 'fedex') {
-                prod = 'Otro / Sin Nombre';
-            }
-
             const estado = p.estado_destino || 'Desconocido';
-            const llave = `${estado}|${prod}`; // Ya invertido: Estado primero, Producto después
+            const llave = `${estado}|${prod}`; 
 
             agrupado[llave] = (agrupado[llave] || 0) + 1;
         });
 
-        // Convertir, ordenar y renderizar
         const lista = Object.keys(agrupado)
             .map(k => {
                 const [es, pr] = k.split('|');
                 return { estado: es, prod: pr, cant: agrupado[k] };
             })
-            .sort((a, b) => b.cant - a.cant); // Orden descendente general
+            .sort((a, b) => b.cant - a.cant); 
 
         const tbody = document.getElementById('tablaS4Der'); tbody.innerHTML = '';
-        if (lista.length === 0) tbody.innerHTML = '<tr><td colspan="3">Sin datos para este mes</td></tr>';
+        if (lista.length === 0) tbody.innerHTML = '<tr><td colspan="3">Sin datos para este periodo</td></tr>';
         
         lista.forEach(r => {
             tbody.innerHTML += `<tr><td>${r.estado}</td><td>${r.prod}</td><td><b>${r.cant}</b></td></tr>`;
