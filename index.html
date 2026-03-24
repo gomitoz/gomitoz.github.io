@@ -378,7 +378,13 @@
     function renderSeccion4Izq() {
         const agrupado = {};
         paquetesGlobales.forEach(p => {
-            const prod = p.producto && p.producto !== 'No especificado' ? p.producto : 'Otro / Sin Nombre';
+            let prod = p.producto && p.producto !== 'No especificado' ? p.producto : 'Otro / Sin Nombre';
+            
+            // PARCHE: Si el producto dice "fedex", lo mandamos a "Otro" para no ensuciar el Top 10
+            if (prod.toLowerCase() === 'fedex') {
+                prod = 'Otro / Sin Nombre';
+            }
+
             agrupado[prod] = (agrupado[prod] || 0) + 1;
         });
 
@@ -403,9 +409,15 @@
             const periodo = p.fecha_envio.substring(0, 7); 
             if (mesFiltro && periodo !== mesFiltro) return; 
 
-            const prod = p.producto && p.producto !== 'No especificado' ? p.producto : 'Otro / Sin Nombre';
+            let prod = p.producto && p.producto !== 'No especificado' ? p.producto : 'Otro / Sin Nombre';
+            
+            // PARCHE: Limpieza de datos antiguos
+            if (prod.toLowerCase() === 'fedex') {
+                prod = 'Otro / Sin Nombre';
+            }
+
             const estado = p.estado_destino || 'Desconocido';
-            const llave = `${prod}|${estado}`;
+            const llave = `${estado}|${prod}`; // Ya invertido: Estado primero, Producto después
 
             agrupado[llave] = (agrupado[llave] || 0) + 1;
         });
@@ -413,8 +425,8 @@
         // Convertir, ordenar y renderizar
         const lista = Object.keys(agrupado)
             .map(k => {
-                const [pr, es] = k.split('|');
-                return { prod: pr, estado: es, cant: agrupado[k] };
+                const [es, pr] = k.split('|');
+                return { estado: es, prod: pr, cant: agrupado[k] };
             })
             .sort((a, b) => b.cant - a.cant); // Orden descendente general
 
@@ -422,7 +434,6 @@
         if (lista.length === 0) tbody.innerHTML = '<tr><td colspan="3">Sin datos para este mes</td></tr>';
         
         lista.forEach(r => {
-            // ¡Aquí invertimos el orden de las celdas (td)!
             tbody.innerHTML += `<tr><td>${r.estado}</td><td>${r.prod}</td><td><b>${r.cant}</b></td></tr>`;
         });
     }
