@@ -12,130 +12,64 @@
 
     header{
       background:#0B2D4A;color:#fff;
-      padding:16px 40px;
+      padding:14px 40px;
       display:flex;align-items:center;justify-content:space-between;
       border-bottom:4px solid #00B4B6;
     }
-    header h1{font-size:1.35rem;letter-spacing:1px;}
-    header span{font-size:0.82rem;color:#00B4B6;margin-top:3px;display:block;}
+    header h1{font-size:1.35rem;letter-spacing:1px;font-weight:700;}
+    header span{font-size:.8rem;color:#00B4B6;display:block;margin-top:4px;letter-spacing:.4px;}
 
     .container{max-width:1140px;margin:30px auto;padding:0 20px 50px;}
+    .card{background:#fff;border-radius:8px;box-shadow:0 2px 14px rgba(0,0,0,.09);padding:28px 34px;margin-bottom:20px;}
 
-    .card{
-      background:#fff;border-radius:8px;
-      box-shadow:0 2px 14px rgba(0,0,0,0.09);
-      padding:28px 34px;margin-bottom:20px;
-    }
-
-    /* Fields grid */
-    .fields-row{
-      display:grid;
-      grid-template-columns:2.2fr 1fr 1fr 1fr 1fr;
-      gap:14px 22px;
-      margin-bottom:22px;
-      align-items:end;
-    }
+    .fields-row{display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 1fr;gap:14px 22px;margin-bottom:22px;align-items:end;}
     .field-group{display:flex;flex-direction:column;gap:5px;}
-    .field-group label{
-      font-size:0.72rem;font-weight:700;
-      color:#0B2D4A;text-transform:uppercase;letter-spacing:0.6px;
-    }
-    .field-group input,.field-group select{
-      border:1.5px solid #c8d2de;border-radius:5px;
-      padding:8px 10px;font-size:0.88rem;color:#1a1a2e;
-      background:#f8fafc;transition:border-color .2s;
-    }
-    .field-group input:focus,.field-group select:focus{
-      outline:none;border-color:#00B4B6;background:#fff;
-    }
+    .field-group label{font-size:.72rem;font-weight:700;color:#0B2D4A;text-transform:uppercase;letter-spacing:.6px;}
+    .field-group input,.field-group select{border:1.5px solid #c8d2de;border-radius:5px;padding:8px 10px;font-size:.88rem;color:#1a1a2e;background:#f8fafc;transition:border-color .2s;}
+    .field-group input:focus,.field-group select:focus{outline:none;border-color:#00B4B6;background:#fff;}
     .field-group input[readonly]{background:#edf1f6;color:#555;cursor:default;}
 
-    /* Subtitle area */
     .subtitle-block{text-align:center;margin-bottom:22px;}
-    .project-name-lbl{
-      font-size:1rem;font-weight:700;color:#00B4B6;
-      letter-spacing:.5px;margin-bottom:5px;min-height:22px;
-    }
-    .quote-subtitle{
-      font-size:1.02rem;font-weight:700;color:#0B2D4A;
-      letter-spacing:.4px;padding-bottom:14px;
-      border-bottom:2.5px solid #00B4B6;
-    }
+    .project-name-lbl{font-size:1rem;font-weight:700;color:#00B4B6;letter-spacing:.5px;margin-bottom:5px;min-height:22px;}
+    .quote-subtitle{font-size:1.02rem;font-weight:700;color:#0B2D4A;letter-spacing:.4px;padding-bottom:14px;border-bottom:2.5px solid #00B4B6;}
 
-    /* Table */
     .table-wrapper{overflow-x:auto;}
-    table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+    table{width:100%;border-collapse:collapse;font-size:.86rem;}
     thead tr{background:#0B2D4A;color:#fff;}
-    thead th{
-      padding:11px 12px;text-align:left;
-      font-weight:600;letter-spacing:.3px;white-space:nowrap;
-    }
+    thead th{padding:11px 12px;text-align:left;font-weight:600;letter-spacing:.3px;white-space:nowrap;}
     thead th.center{text-align:center;}
-    thead th.right{text-align:right;}
 
     tbody tr:nth-child(even){background:#f4f8fb;}
     tbody tr:hover{background:#e6f3f8;}
     tbody td{padding:7px 10px;vertical-align:middle;}
     tbody td.line-num{text-align:center;font-weight:700;color:#0B2D4A;width:52px;}
 
-    tbody td select,tbody td input{
-      width:100%;border:1.5px solid #c8d2de;border-radius:4px;
-      padding:5px 8px;font-size:0.84rem;background:#fff;
-    }
+    tbody td select,tbody td input{width:100%;border:1.5px solid #c8d2de;border-radius:4px;padding:5px 8px;font-size:.84rem;background:#fff;}
     tbody td select:focus,tbody td input:focus{outline:none;border-color:#00B4B6;}
     tbody td input[readonly]{background:#edf1f6;color:#333;border-color:#dce3eb;}
+
+    /* centrado en columnas numericas */
+    td.qty-cell,td.calc-cell{text-align:center;width:130px;}
+    td.qty-cell input,td.calc-cell input{text-align:center;}
     td.desc-cell{min-width:270px;}
-    td.qty-cell{width:105px;}
-    td.calc-cell{width:125px;}
     td.act-cell{width:38px;text-align:center;}
 
     tfoot tr{background:#0B2D4A;color:#fff;}
-    tfoot td{padding:10px 12px;font-weight:700;font-size:0.88rem;}
-    tfoot td.right{text-align:right;}
+    tfoot td{padding:10px 12px;font-weight:700;font-size:.88rem;}
+    tfoot td.center{text-align:center;}
 
-    .btn-add{
-      margin-top:13px;padding:8px 20px;
-      background:#00B4B6;color:#fff;border:none;border-radius:5px;
-      cursor:pointer;font-size:0.86rem;font-weight:700;
-      transition:background .2s;
-    }
+    .btn-add{margin-top:13px;padding:8px 20px;background:#00B4B6;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:.86rem;font-weight:700;transition:background .2s;}
     .btn-add:hover{background:#009a9c;}
-
-    .btn-del{
-      background:none;border:none;cursor:pointer;
-      color:#c0392b;font-size:1rem;padding:2px 5px;
-    }
+    .btn-del{background:none;border:none;cursor:pointer;color:#c0392b;font-size:1rem;padding:2px 5px;}
     .btn-del:hover{color:#922b21;}
 
-    /* Alert */
-    .weight-alert{
-      display:none;margin-top:16px;
-      background:#fff8e1;border-left:4px solid #f0ad4e;
-      border-radius:4px;padding:11px 16px;
-      font-size:0.85rem;color:#7d5a00;font-weight:600;
-    }
+    .weight-alert{display:none;margin-top:16px;background:#fff8e1;border-left:4px solid #f0ad4e;border-radius:4px;padding:11px 16px;font-size:.85rem;color:#7d5a00;font-weight:600;}
     .weight-alert.show{display:block;}
 
-    /* Legal */
-    .footer-legal{
-      margin-top:22px;padding-top:16px;
-      border-top:2px solid #0B2D4A;
-      font-size:0.8rem;color:#444;line-height:1.65;
-    }
-    .footer-legal .ci-title{
-      font-size:0.83rem;font-weight:700;
-      color:#0B2D4A;margin-bottom:4px;display:block;
-    }
+    .footer-legal{margin-top:22px;padding-top:16px;border-top:2px solid #0B2D4A;font-size:.8rem;color:#444;line-height:1.65;}
+    .footer-legal .ci-title{font-size:.83rem;font-weight:700;color:#0B2D4A;margin-bottom:4px;display:block;}
 
-    /* Download */
-    .btn-dl{
-      display:flex;align-items:center;justify-content:center;gap:8px;
-      margin:18px auto 0;padding:12px 38px;
-      background:#0B2D4A;color:#fff;border:none;border-radius:6px;
-      cursor:pointer;font-size:0.94rem;font-weight:700;letter-spacing:.4px;
-      transition:background .2s;
-      max-width:280px;width:100%;
-    }
+    .btn-dl{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px auto 0;padding:12px 38px;background:#0B2D4A;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.94rem;font-weight:700;letter-spacing:.4px;transition:background .2s;max-width:280px;width:100%;}
     .btn-dl:hover{background:#0d3d62;}
 
     @media(max-width:700px){
@@ -156,48 +90,31 @@
 <div class="container">
   <div class="card">
 
-    <!-- Header fields -->
     <div class="fields-row">
       <div class="field-group">
         <label>Project</label>
-        <select id="projectSelect" onchange="onProjectChange()">
-          <option value="">&#8212; Select Project &#8212;</option>
-        </select>
+        <select id="projectSelect" onchange="onProjectChange()"><option value="">&#8212; Select Project &#8212;</option></select>
       </div>
-      <div class="field-group">
-        <label>RFQ #</label>
-        <input type="number" id="rfqNum" placeholder="Max 10 digits" oninput="capLen(this,10)"/>
-      </div>
-      <div class="field-group">
-        <label>FMR #</label>
-        <input type="number" id="fmrNum" placeholder="Max 10 digits" oninput="capLen(this,10)"/>
-      </div>
-      <div class="field-group">
-        <label>Date</label>
-        <input type="text" id="quoteDate" readonly/>
-      </div>
-      <div class="field-group">
-        <label>CPA</label>
-        <input type="text" id="cpaField" readonly placeholder="Auto"/>
-      </div>
+      <div class="field-group"><label>RFQ #</label><input type="number" id="rfqNum" placeholder="Max 10 digits" oninput="capLen(this,10)"/></div>
+      <div class="field-group"><label>FMR #</label><input type="number" id="fmrNum" placeholder="Max 10 digits" oninput="capLen(this,10)"/></div>
+      <div class="field-group"><label>Date</label><input type="text" id="quoteDate" readonly/></div>
+      <div class="field-group"><label>CPA</label><input type="text" id="cpaField" readonly placeholder="Auto"/></div>
     </div>
 
-    <!-- Subtitle -->
     <div class="subtitle-block">
       <div class="project-name-lbl" id="projNameLbl"></div>
       <div class="quote-subtitle">Unit Prices for Field Material Requisitions</div>
     </div>
 
-    <!-- Quotation Table -->
     <div class="table-wrapper">
-      <table id="quoteTable">
+      <table>
         <thead>
           <tr>
             <th class="center">Line</th>
             <th>Description</th>
-            <th class="right">Quantity (ea)</th>
-            <th class="right">Weight (lbs)</th>
-            <th class="right">Rebar Cost</th>
+            <th class="center">Quantity (ea)</th>
+            <th class="center">Weight (lbs)</th>
+            <th class="center">Rebar Cost</th>
             <th></th>
           </tr>
         </thead>
@@ -205,9 +122,9 @@
         <tfoot>
           <tr>
             <td colspan="2" style="text-align:right;padding-right:14px;">TOTAL</td>
-            <td class="right" id="totQty">0.00</td>
-            <td class="right" id="totWeight">0.0000</td>
-            <td class="right" id="totRebar">0.0000</td>
+            <td class="center" id="totQty">0.00</td>
+            <td class="center" id="totWeight">0.0000</td>
+            <td class="center" id="totRebar">$0.0000</td>
             <td></td>
           </tr>
         </tfoot>
@@ -215,12 +132,10 @@
     </div>
     <button class="btn-add" onclick="addRow()">&#43; Add Line</button>
 
-    <!-- Weight Alert -->
     <div id="wAlert" class="weight-alert">
       &#9888; La cantidad total (lbs) no supera el l&iacute;mite permitido, por lo cual se pueden generar costos adicionales.
     </div>
 
-    <!-- Legal footer -->
     <div class="footer-legal">
       <span class="ci-title">Confidential Information</span>
       The document contains confidential and proprietary information of INGETEK USA, LLC and is intended solely for the
@@ -229,87 +144,78 @@
     </div>
 
   </div>
-
-  <button class="btn-dl" onclick="downloadPDF()">
-    &#11015; Download Quotation (PDF)
-  </button>
+  <button class="btn-dl" onclick="downloadPDF()">&#11015; Download Quotation (PDF)</button>
 </div>
 
 <script>
-/* ===================== DATA ===================== */
 const PROJECTS = [
-  {cpa:'304686', num:'22911', name:'RIO GRANDE',   unitPrice:0.5766},
-  {cpa:'472747', num:'24196', name:'TRAIN 3',      unitPrice:0.5577},
-  {cpa:'644038', num:'25078', name:'TRAIN 4',      unitPrice:0.49},
-  {cpa:'645690', num:'25079', name:'TRAIN 5',      unitPrice:0.49},
-  {cpa:'605123', num:'24789', name:'THACKER PASS', unitPrice:0.5885},
+  {cpa:'304686',num:'22911',name:'RIO GRANDE',  unitPrice:0.5766},
+  {cpa:'472747',num:'24196',name:'TRAIN 3',     unitPrice:0.5577},
+  {cpa:'644038',num:'25078',name:'TRAIN 4',     unitPrice:0.49},
+  {cpa:'645690',num:'25079',name:'TRAIN 5',     unitPrice:0.49},
+  {cpa:'605123',num:'24789',name:'THACKER PASS',unitPrice:0.5885},
 ];
 
 const PRODUCTS = [
-  {desc:'#3 Black Rebar 60, Straight, 40 FT Long',  weight:15.0521},
-  {desc:'#4 Black Rebar 60, Straight, 40 FT Long',  weight:26.7175},
-  {desc:'#5 Black Rebar 60, Straight, 40 FT Long',  weight:41.7158},
-  {desc:'#6 Black Rebar 80, Straight, 40 FT Long',  weight:60.0740},
-  {desc:'#7 Black Rebar 80, Straight, 40 FT Long',  weight:81.7652},
-  {desc:'#8 Black Rebar 80, Straight, 40 FT Long',  weight:106.7893},
-  {desc:'#9 Black Rebar 80, Straight, 40 FT Long',  weight:136.0065},
-  {desc:'#10 Black Rebar 80, Straight, 40 FT Long', weight:172.1316},
-  {desc:'#11 Black Rebar 80, Straight, 40 FT Long', weight:212.5303},
-  {desc:'#3 Black Rebar 60, Straight, 50 FT Long',  weight:18.8151},
-  {desc:'#4 Black Rebar 60, Straight, 50 FT Long',  weight:33.3969},
-  {desc:'#5 Black Rebar 60, Straight, 50 FT Long',  weight:52.1448},
-  {desc:'#6 Black Rebar 80, Straight, 50 FT Long',  weight:75.0925},
-  {desc:'#7 Black Rebar 80, Straight, 50 FT Long',  weight:102.2065},
-  {desc:'#8 Black Rebar 80, Straight, 50 FT Long',  weight:133.4866},
-  {desc:'#9 Black Rebar 80, Straight, 50 FT Long',  weight:170.0082},
-  {desc:'#10 Black Rebar 80, Straight, 50 FT Long', weight:215.1645},
-  {desc:'#11 Black Rebar 80, Straight, 50 FT Long', weight:265.6629},
-  {desc:'#3 Black Rebar 60, Straight, 60 FT Long',  weight:22.5782},
-  {desc:'#4 Black Rebar 60, Straight, 60 FT Long',  weight:40.0762},
-  {desc:'#5 Black Rebar 60, Straight, 60 FT Long',  weight:62.5738},
-  {desc:'#6 Black Rebar 80, Straight, 60 FT Long',  weight:90.1110},
-  {desc:'#7 Black Rebar 80, Straight, 60 FT Long',  weight:122.6478},
-  {desc:'#8 Black Rebar 80, Straight, 60 FT Long',  weight:160.1840},
-  {desc:'#9 Black Rebar 80, Straight, 60 FT Long',  weight:204.0098},
-  {desc:'#10 Black Rebar 80, Straight, 60 FT Long', weight:258.1974},
-  {desc:'#11 Black Rebar 80, Straight, 60 FT Long', weight:318.7955},
+  {desc:'#3 Black Rebar 60, Straight, 40 FT Long', weight:15.0521},
+  {desc:'#4 Black Rebar 60, Straight, 40 FT Long', weight:26.7175},
+  {desc:'#5 Black Rebar 60, Straight, 40 FT Long', weight:41.7158},
+  {desc:'#6 Black Rebar 80, Straight, 40 FT Long', weight:60.0740},
+  {desc:'#7 Black Rebar 80, Straight, 40 FT Long', weight:81.7652},
+  {desc:'#8 Black Rebar 80, Straight, 40 FT Long', weight:106.7893},
+  {desc:'#9 Black Rebar 80, Straight, 40 FT Long', weight:136.0065},
+  {desc:'#10 Black Rebar 80, Straight, 40 FT Long',weight:172.1316},
+  {desc:'#11 Black Rebar 80, Straight, 40 FT Long',weight:212.5303},
+  {desc:'#3 Black Rebar 60, Straight, 50 FT Long', weight:18.8151},
+  {desc:'#4 Black Rebar 60, Straight, 50 FT Long', weight:33.3969},
+  {desc:'#5 Black Rebar 60, Straight, 50 FT Long', weight:52.1448},
+  {desc:'#6 Black Rebar 80, Straight, 50 FT Long', weight:75.0925},
+  {desc:'#7 Black Rebar 80, Straight, 50 FT Long', weight:102.2065},
+  {desc:'#8 Black Rebar 80, Straight, 50 FT Long', weight:133.4866},
+  {desc:'#9 Black Rebar 80, Straight, 50 FT Long', weight:170.0082},
+  {desc:'#10 Black Rebar 80, Straight, 50 FT Long',weight:215.1645},
+  {desc:'#11 Black Rebar 80, Straight, 50 FT Long',weight:265.6629},
+  {desc:'#3 Black Rebar 60, Straight, 60 FT Long', weight:22.5782},
+  {desc:'#4 Black Rebar 60, Straight, 60 FT Long', weight:40.0762},
+  {desc:'#5 Black Rebar 60, Straight, 60 FT Long', weight:62.5738},
+  {desc:'#6 Black Rebar 80, Straight, 60 FT Long', weight:90.1110},
+  {desc:'#7 Black Rebar 80, Straight, 60 FT Long', weight:122.6478},
+  {desc:'#8 Black Rebar 80, Straight, 60 FT Long', weight:160.1840},
+  {desc:'#9 Black Rebar 80, Straight, 60 FT Long', weight:204.0098},
+  {desc:'#10 Black Rebar 80, Straight, 60 FT Long',weight:258.1974},
+  {desc:'#11 Black Rebar 80, Straight, 60 FT Long',weight:318.7955},
 ];
 
 const WEIGHT_LIMIT = 40785.51;
 let rowSeq = 0;
 
-/* ===================== INIT ===================== */
+function fmtCurrency(n){
+  return '$'+n.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+}
+function parseCurrency(s){
+  return parseFloat((s||'').replace(/[$,]/g,''))||0;
+}
+
 window.onload = function(){
-  const now = new Date();
-  document.getElementById('quoteDate').value =
+  const now=new Date();
+  document.getElementById('quoteDate').value=
     String(now.getMonth()+1).padStart(2,'0')+'/'+
     String(now.getDate()).padStart(2,'0')+'/'+now.getFullYear();
-
-  const sel = document.getElementById('projectSelect');
+  const sel=document.getElementById('projectSelect');
   PROJECTS.forEach((p,i)=>{
-    const o = document.createElement('option');
-    o.value = i;
-    o.textContent = p.num+' - '+p.name;
-    sel.appendChild(o);
+    const o=document.createElement('option');
+    o.value=i; o.textContent=p.num+' - '+p.name; sel.appendChild(o);
   });
   addRow();
 };
 
-/* ===================== PROJECT ===================== */
 function onProjectChange(){
-  const idx = document.getElementById('projectSelect').value;
-  if(idx===''){ 
-    document.getElementById('cpaField').value='';
-    document.getElementById('projNameLbl').textContent='';
-  } else {
-    const p = PROJECTS[idx];
-    document.getElementById('cpaField').value = p.cpa;
-    document.getElementById('projNameLbl').textContent = p.num+' - '+p.name;
-  }
+  const idx=document.getElementById('projectSelect').value;
+  if(idx===''){ document.getElementById('cpaField').value=''; document.getElementById('projNameLbl').textContent=''; }
+  else{ const p=PROJECTS[idx]; document.getElementById('cpaField').value=p.cpa; document.getElementById('projNameLbl').textContent=p.num+' - '+p.name; }
   recalcAll();
 }
 
-/* ===================== ROWS ===================== */
 function buildOptions(){
   let s='<option value="">-- Select --</option>';
   PRODUCTS.forEach((p,i)=>{ s+=`<option value="${i}">${p.desc}</option>`; });
@@ -318,142 +224,105 @@ function buildOptions(){
 
 function addRow(){
   rowSeq++;
-  const id = rowSeq;
-  const tr = document.createElement('tr');
+  const id=rowSeq;
+  const tr=document.createElement('tr');
   tr.id='r'+id;
   tr.innerHTML=`
     <td class="line-num">${id}</td>
     <td class="desc-cell"><select onchange="recalcRow(${id})">${buildOptions()}</select></td>
     <td class="qty-cell"><input type="number" min="0" step="0.01" placeholder="0.00" oninput="recalcRow(${id})"/></td>
     <td class="calc-cell"><input type="text" readonly value="0.0000"/></td>
-    <td class="calc-cell"><input type="text" readonly value="0.0000"/></td>
+    <td class="calc-cell"><input type="text" readonly value="$0.0000"/></td>
     <td class="act-cell"><button class="btn-del" onclick="delRow(${id})" title="Delete">&#10005;</button></td>
   `;
   document.getElementById('tBody').appendChild(tr);
   renumber();
 }
 
-function delRow(id){
-  const tr=document.getElementById('r'+id);
-  if(tr) tr.remove();
-  renumber();
-  recalcTotals();
-}
-
-function renumber(){
-  document.querySelectorAll('#tBody tr').forEach((tr,i)=>{
-    tr.cells[0].textContent=i+1;
-  });
-}
-
-/* ===================== CALC ===================== */
-function getUP(){
-  const idx=document.getElementById('projectSelect').value;
-  return idx===''? 0 : PROJECTS[idx].unitPrice;
-}
+function delRow(id){ const tr=document.getElementById('r'+id); if(tr) tr.remove(); renumber(); recalcTotals(); }
+function renumber(){ document.querySelectorAll('#tBody tr').forEach((tr,i)=>{ tr.cells[0].textContent=i+1; }); }
+function getUP(){ const idx=document.getElementById('projectSelect').value; return idx===''?0:PROJECTS[idx].unitPrice; }
 
 function recalcRow(id){
-  const tr=document.getElementById('r'+id);
-  if(!tr) return;
-  const si = tr.querySelector('select').value;
-  const qty = parseFloat(tr.querySelector('input[type=number]').value)||0;
-  const ro = tr.querySelectorAll('input[readonly]');
-  if(si===''){ ro[0].value='0.0000'; ro[1].value='0.0000'; }
-  else {
-    const w = qty * PRODUCTS[si].weight;
-    ro[0].value = w.toFixed(4);
-    ro[1].value = (w * getUP()).toFixed(4);
-  }
+  const tr=document.getElementById('r'+id); if(!tr) return;
+  const si=tr.querySelector('select').value;
+  const qty=parseFloat(tr.querySelector('input[type=number]').value)||0;
+  const ro=tr.querySelectorAll('input[readonly]');
+  if(si===''){ ro[0].value='0.0000'; ro[1].value='$0.0000'; }
+  else{ const w=qty*PRODUCTS[si].weight; ro[0].value=w.toFixed(4); ro[1].value=fmtCurrency(w*getUP()); }
   recalcTotals();
 }
 
-function recalcAll(){
-  document.querySelectorAll('#tBody tr').forEach(tr=>{
-    const id=parseInt(tr.id.replace('r',''));
-    recalcRow(id);
-  });
-}
+function recalcAll(){ document.querySelectorAll('#tBody tr').forEach(tr=>{ recalcRow(parseInt(tr.id.replace('r',''))); }); }
 
 function recalcTotals(){
   let tQ=0,tW=0,tR=0;
   document.querySelectorAll('#tBody tr').forEach(tr=>{
-    tQ += parseFloat(tr.querySelector('input[type=number]')?.value)||0;
+    tQ+=parseFloat(tr.querySelector('input[type=number]')?.value)||0;
     const ro=tr.querySelectorAll('input[readonly]');
-    tW += parseFloat(ro[0]?.value)||0;
-    tR += parseFloat(ro[1]?.value)||0;
+    tW+=parseFloat(ro[0]?.value)||0;
+    tR+=parseCurrency(ro[1]?.value);
   });
-  document.getElementById('totQty').textContent    = tQ.toFixed(2);
-  document.getElementById('totWeight').textContent  = tW.toFixed(4);
-  document.getElementById('totRebar').textContent   = tR.toFixed(4);
-
+  document.getElementById('totQty').textContent=tQ.toFixed(2);
+  document.getElementById('totWeight').textContent=tW.toFixed(4);
+  document.getElementById('totRebar').textContent=fmtCurrency(tR);
   const al=document.getElementById('wAlert');
-  (tW>0 && tW<=WEIGHT_LIMIT) ? al.classList.add('show') : al.classList.remove('show');
+  (tW>0&&tW<=WEIGHT_LIMIT)?al.classList.add('show'):al.classList.remove('show');
 }
 
-/* ===================== UTILS ===================== */
-function capLen(el,max){
-  if(el.value.length>max) el.value=el.value.slice(0,max);
-}
+function capLen(el,max){ if(el.value.length>max) el.value=el.value.slice(0,max); }
 
-/* ===================== PDF ===================== */
 function downloadPDF(){
-  const {jsPDF} = window.jspdf;
-  const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'letter'});
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'letter'});
+  const pw=doc.internal.pageSize.getWidth();
+  const ph=doc.internal.pageSize.getHeight();
 
-  const piIdx = document.getElementById('projectSelect').value;
-  const projLabel = piIdx!=='' ? PROJECTS[piIdx].num+' - '+PROJECTS[piIdx].name : 'N/A';
-  const rfq  = document.getElementById('rfqNum').value  || 'N/A';
-  const fmr  = document.getElementById('fmrNum').value  || 'N/A';
-  const dt   = document.getElementById('quoteDate').value;
-  const cpa  = document.getElementById('cpaField').value || 'N/A';
+  const piIdx=document.getElementById('projectSelect').value;
+  const projLabel=piIdx!==''?PROJECTS[piIdx].num+' - '+PROJECTS[piIdx].name:'N/A';
+  const rfq=document.getElementById('rfqNum').value||'N/A';
+  const fmr=document.getElementById('fmrNum').value||'N/A';
+  const dt=document.getElementById('quoteDate').value;
+  const cpa=document.getElementById('cpaField').value||'N/A';
 
-  /* -- header bar -- */
-  doc.setFillColor(11,45,74);
-  doc.rect(0,0,pw,22,'F');
-  doc.setFillColor(0,180,182);
-  doc.rect(0,22,pw,2.5,'F');
-
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  /* header */
+  doc.setFillColor(11,45,74); doc.rect(0,0,pw,22,'F');
+  doc.setFillColor(0,180,182); doc.rect(0,22,pw,2.5,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14);
   doc.text('INGETEK USA, LLC',14,10);
   doc.setFont('helvetica','normal'); doc.setFontSize(8);
   doc.text('Field Material Requisitions \u2013 Quotation System',14,17);
-  doc.text('Date: '+dt, pw-14, 10, {align:'right'});
+  doc.setTextColor(180,210,230); doc.setFontSize(7.5);
+  doc.text('Date: '+dt,pw-14,10,{align:'right'});
 
-  /* -- project name + subtitle -- */
-  doc.setTextColor(11,45,74);
-  doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  doc.text(projLabel, pw/2, 32, {align:'center'});
+  /* project + subtitle */
+  doc.setTextColor(11,45,74); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text(projLabel,pw/2,32,{align:'center'});
   doc.setFontSize(9.5);
-  doc.text('Unit Prices for Field Material Requisitions', pw/2, 39, {align:'center'});
+  doc.text('Unit Prices for Field Material Requisitions',pw/2,39,{align:'center'});
 
-  /* -- info row -- */
+  /* info row */
   const iy=48;
   doc.setFontSize(8.5); doc.setTextColor(50,50,50);
-  [['Project:',projLabel,14],['RFQ #:',rfq,100],['FMR #:',fmr,160],['CPA:',cpa,220]].forEach(([lbl,val,x])=>{
+  [['Project:',projLabel,14,30],['RFQ #:',rfq,100,115],['FMR #:',fmr,160,175],['CPA:',cpa,220,232]].forEach(([lbl,val,x,vx])=>{
     doc.setFont('helvetica','bold'); doc.text(lbl,x,iy);
-    doc.setFont('helvetica','normal'); doc.text(val,x+(lbl==='CPA:'?12:16),iy);
+    doc.setFont('helvetica','normal'); doc.text(String(val),vx,iy);
   });
   doc.setDrawColor(0,180,182); doc.setLineWidth(0.5);
   doc.line(14,iy+4,pw-14,iy+4);
 
-  /* -- table body data -- */
+  /* table */
   const tRows=[];
   document.querySelectorAll('#tBody tr').forEach((tr,i)=>{
     const sel=tr.querySelector('select');
     const qty=tr.querySelector('input[type=number]');
     const ro=tr.querySelectorAll('input[readonly]');
-    tRows.push([
-      i+1,
-      sel.options[sel.selectedIndex]?.text||'—',
+    tRows.push([i+1,sel.options[sel.selectedIndex]?.text||'\u2014',
       (parseFloat(qty?.value)||0).toFixed(2),
       ro[0]?.value||'0.0000',
-      ro[1]?.value||'0.0000'
+      ro[1]?.value||'$0.0000'
     ]);
   });
-
   const tQ=document.getElementById('totQty').textContent;
   const tW=document.getElementById('totWeight').textContent;
   const tR=document.getElementById('totRebar').textContent;
@@ -464,46 +333,38 @@ function downloadPDF(){
     body:tRows,
     foot:[[''  ,'TOTAL',tQ,tW,tR]],
     theme:'grid',
-    headStyles:{fillColor:[11,45,74],textColor:255,fontStyle:'bold',fontSize:8.5},
+    headStyles:{fillColor:[11,45,74],textColor:255,fontStyle:'bold',fontSize:8.5,halign:'center'},
     footStyles:{fillColor:[11,45,74],textColor:255,fontStyle:'bold',fontSize:8.5},
     bodyStyles:{fontSize:8,textColor:[30,30,30]},
     alternateRowStyles:{fillColor:[244,248,251]},
     columnStyles:{
       0:{cellWidth:14,halign:'center'},
-      1:{cellWidth:'auto'},
-      2:{cellWidth:28,halign:'right'},
-      3:{cellWidth:32,halign:'right'},
-      4:{cellWidth:32,halign:'right'},
+      1:{cellWidth:'auto',halign:'left'},
+      2:{cellWidth:30,halign:'center'},
+      3:{cellWidth:34,halign:'center'},
+      4:{cellWidth:38,halign:'center'},
     },
     margin:{left:14,right:14},
   });
 
-  let fy = doc.lastAutoTable.finalY + 6;
+  let fy=doc.lastAutoTable.finalY+6;
 
-  /* -- weight alert in PDF -- */
   const tWnum=parseFloat(tW);
-  if(tWnum>0 && tWnum<=WEIGHT_LIMIT){
-    doc.setFillColor(255,248,225);
-    doc.setDrawColor(240,173,78); doc.setLineWidth(0.5);
+  if(tWnum>0&&tWnum<=WEIGHT_LIMIT){
+    doc.setFillColor(255,248,225); doc.setDrawColor(240,173,78); doc.setLineWidth(0.5);
     doc.roundedRect(14,fy,pw-28,11,2,2,'FD');
-    doc.setFontSize(8); doc.setTextColor(125,90,4);
-    doc.setFont('helvetica','bold');
+    doc.setFontSize(8); doc.setTextColor(125,90,4); doc.setFont('helvetica','bold');
     doc.text('\u26A0  La cantidad total (lbs) no supera el l\u00EDmite permitido, por lo cual se pueden generar costos adicionales.',18,fy+7);
     fy+=17;
   }
 
-  /* -- legal footer -- */
-  doc.setDrawColor(11,45,74); doc.setLineWidth(0.7);
-  doc.line(14,fy,pw-14,fy); fy+=5;
+  doc.setDrawColor(11,45,74); doc.setLineWidth(0.7); doc.line(14,fy,pw-14,fy); fy+=5;
   doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(11,45,74);
   doc.text('Confidential Information',14,fy); fy+=5;
   doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
-  const legal='The document contains confidential and proprietary information of INGETEK USA, LLC and is intended solely for the Recipient. It may not be disclosed, reproduced, or shared with any third party without the prior written authorization of INGETEK USA, LLC.';
-  doc.text(doc.splitTextToSize(legal,pw-28),14,fy);
+  doc.text(doc.splitTextToSize('The document contains confidential and proprietary information of INGETEK USA, LLC and is intended solely for the Recipient. It may not be disclosed, reproduced, or shared with any third party without the prior written authorization of INGETEK USA, LLC.',pw-28),14,fy);
 
-  /* -- teal bottom bar -- */
-  doc.setFillColor(0,180,182);
-  doc.rect(0,ph-4,pw,4,'F');
+  doc.setFillColor(0,180,182); doc.rect(0,ph-4,pw,4,'F');
 
   const fname='INGETEK_Quotation'+(rfq!=='N/A'?'_RFQ'+rfq:'')+(fmr!=='N/A'?'_FMR'+fmr:'')+(piIdx!==''?'_'+PROJECTS[piIdx].name.replace(/ /g,'-'):'')+'_'+dt.replace(/\//g,'-')+'.pdf';
   doc.save(fname);
