@@ -253,22 +253,24 @@
 
     function dibujarTabla(idBody, lista) {
         const tbody = document.getElementById(idBody);
-        tbody.innerHTML = '';
-
+        
         if (lista.length === 0) {
             tbody.innerHTML = '<tr><td colspan="3">Todo al día. No hay pendientes.</td></tr>';
             return;
         }
 
+        // ¡EL TRUCO DE RENDIMIENTO!: Creamos una variable de texto vacía
+        let htmlContent = ''; 
+
         lista.forEach(r => {
-            // Le ponemos un poco de color visual si lleva muchos días atorado
             let claseDias = '';
             if (r.dias !== 'N/A') {
                 if (r.dias >= 10) claseDias = 'alerta-roja';
                 else if (r.dias >= 5) claseDias = 'alerta-amarilla';
             }
 
-            tbody.innerHTML += `
+            // Vamos sumando el texto en la memoria (esto toma 0.001 segundos)
+            htmlContent += `
                 <tr>
                     <td><strong>${r.guia}</strong></td>
                     <td style="font-size: 0.9em;">${r.estatus}</td>
@@ -276,6 +278,9 @@
                 </tr>
             `;
         });
+
+        // Pegamos todos los miles de renglones de un solo golpe en la pantalla
+        tbody.innerHTML = htmlContent;
     }
 
     // ==========================================
